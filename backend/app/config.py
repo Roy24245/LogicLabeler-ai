@@ -7,6 +7,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "frozen": False}
+
     dashscope_api_key: str = ""
     database_url: str = "sqlite:///./data/logiclabeler.db"
     chromadb_host: str = "localhost"
@@ -15,10 +17,6 @@ class Settings(BaseSettings):
 
     soldier_mode: str = "qwen_vision"  # "qwen_vision" | "grounded_sam"
     augmentation_enabled: bool = True
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
     @property
     def datasets_dir(self) -> Path:

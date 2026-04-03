@@ -11,6 +11,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import DownloadIcon from '@mui/icons-material/Download'
 import ImageIcon from '@mui/icons-material/Image'
 import LabelIcon from '@mui/icons-material/Label'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { useDropzone } from 'react-dropzone'
 import {
   getDatasets, createDataset, deleteDataset, importDataset, exportDataset,
@@ -125,6 +126,13 @@ export default function Datasets() {
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   <Chip icon={<ImageIcon />} label={`${ds.image_count} 張圖片`} size="small" />
                   <Chip icon={<LabelIcon />} label={`${ds.annotation_count} 標註`} size="small" />
+                  <Chip
+                    icon={<CheckCircleIcon />}
+                    label={`${ds.labeled_image_count ?? 0}/${ds.image_count} 已標註`}
+                    size="small"
+                    color={ds.labeled_image_count > 0 && ds.labeled_image_count >= ds.image_count ? 'success' : ds.labeled_image_count > 0 ? 'warning' : 'default'}
+                    variant="outlined"
+                  />
                   <Chip label={ds.task_type} size="small" variant="outlined" />
                 </Box>
               </CardContent>

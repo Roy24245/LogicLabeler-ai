@@ -38,6 +38,7 @@ class Image(Base):
     width: Mapped[int] = mapped_column(Integer, default=0)
     height: Mapped[int] = mapped_column(Integer, default=0)
     is_augmented: Mapped[bool] = mapped_column(Boolean, default=False)
+    split: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
@@ -58,11 +59,27 @@ class Annotation(Base):
     mask_path: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     source: Mapped[str] = mapped_column(String(32), default="manual")
+    review_status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    review_comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
 
     image: Mapped["Image"] = relationship(back_populates="annotations")
+
+
+class ReviewJob(Base):
+    __tablename__ = "review_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    dataset_id: Mapped[int] = mapped_column(ForeignKey("datasets.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    total_images: Mapped[int] = mapped_column(Integer, default=0)
+    processed_images: Mapped[int] = mapped_column(Integer, default=0)
+    results_summary: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now()
+    )
 
 
 class TrainingJob(Base):

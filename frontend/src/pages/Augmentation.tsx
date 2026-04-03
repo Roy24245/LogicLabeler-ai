@@ -6,9 +6,8 @@ import {
 } from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
-import { getDatasets, getSettings, type Dataset, type Settings } from '../api/client'
+import { getDatasets, getSettings, runAugmentation, type Dataset, type Settings } from '../api/client'
 import { useStore } from '../store/useStore'
-import api from '../api/client'
 
 const VARIATION_TYPES = [
   { id: 'angle_change', label: '視角變換', desc: '微調相機拍攝角度' },
@@ -50,12 +49,11 @@ export default function Augmentation() {
     setRunning(true)
     setProgress(0)
     try {
-      await api.post('/labeling/run', {
+      const { data } = await runAugmentation({
         dataset_id: selectedDs,
-        instruction: `augment:${selectedTypes.join(',')}`,
-        soldier_mode: 'qwen_vision',
+        variation_types: selectedTypes,
       })
-      showSnackbar('增強任務已提交', 'success')
+      showSnackbar(`增強完成：成功生成 ${data.successfully_created} 張圖片`, 'success')
     } catch (e: any) {
       showSnackbar(e?.response?.data?.detail || '增強失敗', 'error')
     }

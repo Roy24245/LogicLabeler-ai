@@ -15,8 +15,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import SessionLocal, get_db
-from app.models import Annotation, Dataset, Image, LabelingJob
-from app.services import commander, soldier, critic, rag_service, augmentation
+from app.models import Annotation, Dataset, Image, LabelingJob, ReviewJob
+from app.services import commander, soldier, critic, rag_service, augmentation, reviewer
 from app.services import dataset_service as ds_svc
 
 logger = logging.getLogger(__name__)
@@ -37,8 +37,19 @@ class LabelingRequest(BaseModel):
     augment_types: list[str] | None = None
 
 
+class ReviewRequest(BaseModel):
+    dataset_id: int
+    image_ids: list[int] | None = None
+
+
 @router.post("/labeling/run")
 def run_labeling(body: LabelingRequest, db: Session = Depends(get_db)):
+    if not settings.dashscope_api_key:
+        raise HTTPException(
+            400,
+            "DashScope API Key 尚未設定。請先在「設定」頁面輸入有效的 API Key。",
+        )
+
     ds = ds_svc.get_dataset(db, body.dataset_id)
     if not ds:
         raise HTTPException(404, "Dataset not found")
@@ -224,3 +235,164 @@ def _log(job_id: int, msg: str):
             q.put_nowait(msg)
         except asyncio.QueueFull:
             pass
+
+
+# ── AI Review ──────────────────────────────────────────────────────
+
+_review_logs: dict[int, list[str]] = {}
+
+
+@router.post("/labeling/review")
+def start_review(body: ReviewRequest, db: Session = Depends(get_db)):
+    if not settings.dashscope_api_key:
+        raise HTTPException(400, "DashScope API Key 尚未設定。")
+
+    ds = ds_svc.get_dataset(db, body.dataset_id)
+    if not ds:
+        raise HTTPException(404, "Dataset not found")
+
+    if body.image_ids:
+        images = db.query(Image).filter(Image.id.in_(body.image_ids), Image.dataset_id == body.dataset_id).all()
+    else:
+        images = db.query(Image).filter(Image.dataset_id == body.dataset_id).all()
+
+    if not images:
+        raise HTTPException(400, "No images to review")
+
+    images_with_anns = [img for img in images if db.query(Annotation).filter(Annotation.image_id == img.id).count() > 0]
+    if not images_with_anns:
+        raise HTTPException(400, "所選圖片沒有標註可供審查")
+
+    job = ReviewJob(
+        dataset_id=body.dataset_id,
+        status="running",
+        total_images=len(images_with_anns),
+        processed_images=0,
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    _review_logs[job.id] = []
+
+    thread = threading.Thread(target=_run_review, args=(job.id, body.dataset_id, [img.id for img in images_with_anns]), daemon=True)
+    thread.start()
+
+    return {"job_id": job.id, "status": "running", "total_images": len(images_with_anns)}
+
+
+@router.get("/labeling/review/{job_id}")
+def review_status(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(ReviewJob).filter(ReviewJob.id == job_id).first()
+    if not job:
+        raise HTTPException(404, "Review job not found")
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "total_images": job.total_images,
+        "processed_images": job.processed_images,
+        "results_summary": job.results_summary,
+        "logs": _review_logs.get(job.id, [])[-50:],
+    }
+
+
+@router.post("/labeling/review/{job_id}/apply")
+def apply_review(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(ReviewJob).filter(ReviewJob.id == job_id).first()
+    if not job:
+        raise HTTPException(404, "Review job not found")
+    if job.status != "completed":
+        raise HTTPException(400, "Review not completed yet")
+
+    applied = 0
+    rejected_anns = db.query(Annotation).filter(
+        Annotation.review_status == "rejected",
+        Annotation.image_id.in_(
+            db.query(Image.id).filter(Image.dataset_id == job.dataset_id)
+        ),
+    ).all()
+    for ann in rejected_anns:
+        db.delete(ann)
+        applied += 1
+
+    needs_adj = db.query(Annotation).filter(
+        Annotation.review_status == "needs_adjustment",
+        Annotation.image_id.in_(
+            db.query(Image.id).filter(Image.dataset_id == job.dataset_id)
+        ),
+    ).all()
+    for ann in needs_adj:
+        if ann.review_comment and "建議類別:" in ann.review_comment:
+            suggested = ann.review_comment.split("建議類別:")[-1].strip()
+            if suggested:
+                ann.class_name = suggested
+                applied += 1
+        ann.review_status = "approved"
+        ann.review_comment = None
+
+    db.commit()
+    ds_svc._sync_counts(db, job.dataset_id)
+    return {"ok": True, "applied": applied}
+
+
+def _run_review(job_id: int, dataset_id: int, image_ids: list[int]):
+    db = SessionLocal()
+    try:
+        job = db.query(ReviewJob).filter(ReviewJob.id == job_id).first()
+        if not job:
+            return
+
+        _review_log(job_id, "=== AI 標註審查開始 ===")
+        summary = {"approved": 0, "rejected": 0, "needs_adjustment": 0}
+
+        for idx, img_id in enumerate(image_ids):
+            img = db.query(Image).filter(Image.id == img_id).first()
+            if not img:
+                continue
+
+            anns = db.query(Annotation).filter(Annotation.image_id == img_id).all()
+            if not anns:
+                job.processed_images = idx + 1
+                db.commit()
+                continue
+
+            _review_log(job_id, f"[Review] 審查圖片 {idx + 1}/{len(image_ids)}: {img.filename} ({len(anns)} 標註)")
+
+            ann_dicts = [{"id": a.id, "class_name": a.class_name, "bbox": a.bbox, "confidence": a.confidence} for a in anns]
+            results = reviewer.review_image_annotations(img.filepath, ann_dicts)
+
+            for result in results:
+                ann_id = result.get("annotation_id")
+                if not ann_id:
+                    continue
+                ann = db.query(Annotation).filter(Annotation.id == ann_id).first()
+                if not ann:
+                    continue
+                ann.review_status = result["review_status"]
+                ann.review_comment = result.get("review_comment")
+                summary[result["review_status"]] = summary.get(result["review_status"], 0) + 1
+                status_icon = {"approved": "✓", "rejected": "✗", "needs_adjustment": "⚠"}.get(result["review_status"], "?")
+                _review_log(job_id, f"  {status_icon} [{ann.class_name}] → {result['review_status']}: {result.get('review_comment', '')}")
+
+            job.processed_images = idx + 1
+            db.commit()
+
+        job.results_summary = summary
+        job.status = "completed"
+        db.commit()
+        _review_log(job_id, f"\n=== 審查完成 === 通過: {summary['approved']}, 拒絕: {summary['rejected']}, 需調整: {summary['needs_adjustment']}")
+
+    except Exception as e:
+        logger.exception("Review pipeline failed: %s", e)
+        _review_log(job_id, f"\n[ERROR] 審查失敗: {e}")
+        job = db.query(ReviewJob).filter(ReviewJob.id == job_id).first()
+        if job:
+            job.status = "failed"
+            db.commit()
+    finally:
+        db.close()
+
+
+def _review_log(job_id: int, msg: str):
+    logger.info("[ReviewJob %d] %s", job_id, msg)
+    _review_logs.setdefault(job_id, []).append(msg)

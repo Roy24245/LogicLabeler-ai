@@ -61,7 +61,7 @@ def generate_variation(
 
     try:
         response = ImageSynthesis.call(
-            model="wanx2.0-t2i-turbo",
+            model="qwen-image-2.0-pro",
             prompt=prompt,
             n=1,
             size="1024*1024",

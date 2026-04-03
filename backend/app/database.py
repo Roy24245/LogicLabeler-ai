@@ -26,6 +26,6 @@ def get_db():
 
 
 def init_db():
-    from app.models import Annotation, Dataset, Image, LabelingJob, SystemSetting, TrainingJob  # noqa: F401
+    from app.models import Annotation, Dataset, Image, LabelingJob, ReviewJob, SystemSetting, TrainingJob  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
