@@ -173,11 +173,21 @@ export const getTrainingArtifacts = (id: number) => api.get(`/training/jobs/${id
 export const getTrainingLog = (id: number) => api.get<{ log: string }>(`/training/jobs/${id}/log`)
 
 // Augmentation
+export interface AugJobStatus {
+  id: number
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  total: number
+  processed: number
+  successfully_created: number
+  error: string | null
+}
 export const runAugmentation = (data: {
   dataset_id: number
   variation_types: string[]
   image_ids?: number[]
-}) => api.post<{ total_requested: number; successfully_created: number; results: any[] }>('/augmentation/run', data)
+}) => api.post<{ job_id: number; total_requested: number; status: string; message: string }>('/augmentation/run', data)
+export const getAugmentationJob = (jobId: number) =>
+  api.get<AugJobStatus>(`/augmentation/jobs/${jobId}`)
 
 // Settings
 export const getSettings = () => api.get<Settings>('/settings')

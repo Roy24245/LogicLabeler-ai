@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Box, Button, Card, CardContent, Checkbox, Chip, FormControl,
   FormControlLabel, Grid, InputLabel, MenuItem, Select, Typography,
@@ -6,7 +6,7 @@ import {
 } from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
-import { getDatasets, getSettings, runAugmentation, type Dataset, type Settings } from '../api/client'
+import { getDatasets, getSettings, runAugmentation, getAugmentationJob, type Dataset, type Settings, type AugJobStatus } from '../api/client'
 import { useStore } from '../store/useStore'
 
 const VARIATION_TYPES = [
@@ -25,7 +25,8 @@ export default function Augmentation() {
   const [selectedDs, setSelectedDs] = useState<number>(0)
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['angle_change'])
   const [running, setRunning] = useState(false)
-  const [progress, setProgress] = useState(0)
+  const [jobStatus, setJobStatus] = useState<AugJobStatus | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -35,6 +36,7 @@ export default function Augmentation() {
         setSettings(s.data)
       } catch { /* empty */ }
     })()
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
 
   const toggleType = (id: string) => {
@@ -43,24 +45,50 @@ export default function Augmentation() {
     )
   }
 
+  const startPolling = (jobId: number) => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      try {
+        const { data } = await getAugmentationJob(jobId)
+        setJobStatus(data)
+        if (data.status === 'completed' || data.status === 'failed') {
+          if (pollRef.current) clearInterval(pollRef.current)
+          pollRef.current = null
+          setRunning(false)
+          if (data.status === 'completed') {
+            showSnackbar(`增強完成：成功生成 ${data.successfully_created} 張圖片`, 'success')
+          } else {
+            showSnackbar(`增強失敗：${data.error || '未知錯誤'}`, 'error')
+          }
+        }
+      } catch {
+        /* polling error, will retry */
+      }
+    }, 3000)
+  }
+
   const handleRun = async () => {
     if (!selectedDs) { showSnackbar('請選擇數據集', 'error'); return }
     if (selectedTypes.length === 0) { showSnackbar('請至少選擇一種增強類型', 'error'); return }
     setRunning(true)
-    setProgress(0)
+    setJobStatus(null)
     try {
       const { data } = await runAugmentation({
         dataset_id: selectedDs,
         variation_types: selectedTypes,
       })
-      showSnackbar(`增強完成：成功生成 ${data.successfully_created} 張圖片`, 'success')
+      showSnackbar(data.message, 'info')
+      startPolling(data.job_id)
     } catch (e: any) {
       showSnackbar(e?.response?.data?.detail || '增強失敗', 'error')
+      setRunning(false)
     }
-    setRunning(false)
   }
 
   const isDisabled = settings && !settings.augmentation_enabled
+  const progressPct = jobStatus && jobStatus.total > 0
+    ? Math.round((jobStatus.processed / jobStatus.total) * 100)
+    : 0
 
   return (
     <Box>
@@ -101,6 +129,7 @@ export default function Augmentation() {
                       <Checkbox
                         checked={selectedTypes.includes(v.id)}
                         onChange={() => toggleType(v.id)}
+                        disabled={running}
                       />
                     }
                     label={
@@ -122,7 +151,25 @@ export default function Augmentation() {
                 {running ? '增強進行中...' : '開始數據增強'}
               </Button>
 
-              {running && <LinearProgress />}
+              {running && jobStatus && (
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      進度: {jobStatus.processed} / {jobStatus.total}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {progressPct}%
+                    </Typography>
+                  </Box>
+                  <LinearProgress variant="determinate" value={progressPct} />
+                  {jobStatus.successfully_created > 0 && (
+                    <Typography variant="caption" color="success.main" sx={{ mt: 0.5 }}>
+                      已成功生成 {jobStatus.successfully_created} 張
+                    </Typography>
+                  )}
+                </Box>
+              )}
+              {running && !jobStatus && <LinearProgress />}
             </CardContent>
           </Card>
         </Grid>
@@ -139,6 +186,10 @@ export default function Augmentation() {
                 變換嚴格遵循「只修改非核心語義屬性」的原則，保留所有目標物體的類型、位置和大小，
                 僅調整拍攝角度、光照條件、天氣狀況等環境因素。
               </Typography>
+              <Alert severity="info" sx={{ mt: 1, mb: 2 }}>
+                為避免 API 速率限制，每個生成任務之間會自動間隔 3 秒。
+                批量增強會在後台執行，頁面會自動更新進度。
+              </Alert>
               <Typography variant="subtitle2" sx={{ mt: 2 }}>支持的變換維度：</Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                 {VARIATION_TYPES.map((v) => (
