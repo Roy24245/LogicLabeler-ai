@@ -25,6 +25,7 @@ router = APIRouter(tags=["labeling"])
 
 _job_logs: dict[int, list[str]] = {}
 _log_subscribers: dict[int, list[asyncio.Queue]] = {}
+_job_current_image: dict[int, dict | None] = {}
 
 
 class LabelingRequest(BaseModel):
@@ -72,6 +73,7 @@ def run_labeling(body: LabelingRequest, db: Session = Depends(get_db)):
 
     _job_logs[job.id] = []
     _log_subscribers.setdefault(job.id, [])
+    _job_current_image[job.id] = None
 
     thread = threading.Thread(
         target=_run_pipeline,
@@ -98,6 +100,7 @@ def labeling_status(job_id: int, db: Session = Depends(get_db)):
         "total_images": job.total_images,
         "processed_images": job.processed_images,
         "logs": _job_logs.get(job.id, [])[-50:],
+        "current_image": _job_current_image.get(job.id),
     }
 
 
@@ -191,6 +194,19 @@ def _run_pipeline(job_id: int, request: LabelingRequest):
                 )
                 db.add(ann)
 
+            _job_current_image[job_id] = {
+                "image_id": img.id,
+                "filename": img.filename,
+                "url": f"/static/datasets/{img.dataset_id}/images/{img.filename}",
+                "width": img.width,
+                "height": img.height,
+                "index": idx + 1,
+                "annotations": [
+                    {"class_name": d["class_name"], "bbox": d.get("bbox"), "confidence": d.get("confidence")}
+                    for d in validated
+                ],
+            }
+
             job.processed_images = idx + 1
             db.commit()
 
@@ -224,6 +240,7 @@ def _run_pipeline(job_id: int, request: LabelingRequest):
             job.status = "failed"
             db.commit()
     finally:
+        _job_current_image.pop(job_id, None)
         db.close()
 
 
@@ -240,6 +257,7 @@ def _log(job_id: int, msg: str):
 # ── AI Review ──────────────────────────────────────────────────────
 
 _review_logs: dict[int, list[str]] = {}
+_review_current_image: dict[int, dict | None] = {}
 
 
 @router.post("/labeling/review")
@@ -274,6 +292,7 @@ def start_review(body: ReviewRequest, db: Session = Depends(get_db)):
     db.refresh(job)
 
     _review_logs[job.id] = []
+    _review_current_image[job.id] = None
 
     thread = threading.Thread(target=_run_review, args=(job.id, body.dataset_id, [img.id for img in images_with_anns]), daemon=True)
     thread.start()
@@ -293,6 +312,7 @@ def review_status(job_id: int, db: Session = Depends(get_db)):
         "processed_images": job.processed_images,
         "results_summary": job.results_summary,
         "logs": _review_logs.get(job.id, [])[-50:],
+        "current_image": _review_current_image.get(job.id),
     }
 
 
@@ -361,6 +381,7 @@ def _run_review(job_id: int, dataset_id: int, image_ids: list[int]):
             ann_dicts = [{"id": a.id, "class_name": a.class_name, "bbox": a.bbox, "confidence": a.confidence} for a in anns]
             results = reviewer.review_image_annotations(img.filepath, ann_dicts)
 
+            review_annotations = []
             for result in results:
                 ann_id = result.get("annotation_id")
                 if not ann_id:
@@ -373,6 +394,23 @@ def _run_review(job_id: int, dataset_id: int, image_ids: list[int]):
                 summary[result["review_status"]] = summary.get(result["review_status"], 0) + 1
                 status_icon = {"approved": "✓", "rejected": "✗", "needs_adjustment": "⚠"}.get(result["review_status"], "?")
                 _review_log(job_id, f"  {status_icon} [{ann.class_name}] → {result['review_status']}: {result.get('review_comment', '')}")
+                review_annotations.append({
+                    "class_name": ann.class_name,
+                    "bbox": ann.bbox,
+                    "confidence": ann.confidence,
+                    "review_status": result["review_status"],
+                    "review_comment": result.get("review_comment", ""),
+                })
+
+            _review_current_image[job_id] = {
+                "image_id": img.id,
+                "filename": img.filename,
+                "url": f"/static/datasets/{img.dataset_id}/images/{img.filename}",
+                "width": img.width,
+                "height": img.height,
+                "index": idx + 1,
+                "annotations": review_annotations,
+            }
 
             job.processed_images = idx + 1
             db.commit()
@@ -390,6 +428,7 @@ def _run_review(job_id: int, dataset_id: int, image_ids: list[int]):
             job.status = "failed"
             db.commit()
     finally:
+        _review_current_image.pop(job_id, None)
         db.close()
 
 

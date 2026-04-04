@@ -147,6 +147,41 @@ export const batchSplit = (datasetId: number, imageIds: number[], split: string 
   api.put(`/datasets/${datasetId}/batch-split`, { image_ids: imageIds, split })
 
 // Labeling
+export interface CurrentImagePreview {
+  image_id: number
+  filename: string
+  url: string
+  width: number
+  height: number
+  index: number
+  annotations: {
+    class_name: string
+    bbox: { x: number; y: number; w: number; h: number } | null
+    confidence: number | null
+    review_status?: string
+    review_comment?: string
+  }[]
+}
+
+export interface LabelingStatusResponse {
+  job_id: number
+  status: string
+  total_images: number
+  processed_images: number
+  logs: string[]
+  current_image: CurrentImagePreview | null
+}
+
+export interface ReviewStatusResponse {
+  job_id: number
+  status: string
+  total_images: number
+  processed_images: number
+  results_summary: { approved: number; rejected: number; needs_adjustment: number } | null
+  logs: string[]
+  current_image: CurrentImagePreview | null
+}
+
 export const runLabeling = (data: {
   dataset_id: number
   instruction: string
@@ -154,14 +189,14 @@ export const runLabeling = (data: {
   use_sahi?: boolean
   use_rag?: boolean
 }) => api.post('/labeling/run', data)
-export const getLabelingStatus = (jobId: number) => api.get(`/labeling/status/${jobId}`)
+export const getLabelingStatus = (jobId: number) => api.get<LabelingStatusResponse>(`/labeling/status/${jobId}`)
 export const getLabelingJobs = () => api.get('/labeling/jobs')
 
 // AI Review
 export const runReview = (data: { dataset_id: number; image_ids?: number[] }) =>
   api.post('/labeling/review', data)
 export const getReviewStatus = (jobId: number) =>
-  api.get(`/labeling/review/${jobId}`)
+  api.get<ReviewStatusResponse>(`/labeling/review/${jobId}`)
 export const applyReviewFixes = (jobId: number) =>
   api.post(`/labeling/review/${jobId}/apply`)
 
