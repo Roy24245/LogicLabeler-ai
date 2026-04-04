@@ -1,5 +1,6 @@
+import { useMemo } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Snackbar, Alert } from '@mui/material'
+import { ThemeProvider, Snackbar, Alert, useMediaQuery } from '@mui/material'
 import Layout from './components/Layout/Layout'
 import Dashboard from './pages/Dashboard'
 import Datasets from './pages/Datasets'
@@ -9,12 +10,19 @@ import Training from './pages/Training'
 import Augmentation from './pages/Augmentation'
 import Settings from './pages/Settings'
 import { useStore } from './store/useStore'
+import { lightTheme, darkTheme } from './theme'
 
 export default function App() {
-  const { snackbar, closeSnackbar } = useStore()
+  const { snackbar, closeSnackbar, themeMode } = useStore()
+  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)')
+
+  const theme = useMemo(() => {
+    if (themeMode === 'system') return prefersDark ? darkTheme : lightTheme
+    return themeMode === 'dark' ? darkTheme : lightTheme
+  }, [themeMode, prefersDark])
 
   return (
-    <>
+    <ThemeProvider theme={theme}>
       <Layout>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -33,10 +41,10 @@ export default function App() {
         onClose={closeSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert onClose={closeSnackbar} severity={snackbar.severity} variant="filled">
+        <Alert onClose={closeSnackbar} severity={snackbar.severity} variant="filled" sx={{ borderRadius: 3 }}>
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </>
+    </ThemeProvider>
   )
 }

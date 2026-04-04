@@ -170,6 +170,91 @@ def stop_training(job_id: int) -> bool:
     return False
 
 
+def resume_training(db: Session, job: TrainingJob) -> TrainingJob:
+    """Resume a stopped/failed training job from its last checkpoint."""
+    last_pt = None
+    if job.run_dir:
+        run_path = Path(job.run_dir)
+        for p in run_path.rglob("last.pt"):
+            last_pt = str(p)
+            break
+
+    if not last_pt:
+        raise RuntimeError("No checkpoint (last.pt) found to resume from")
+
+    yaml_path = None
+    train_dir = Path(settings.models_dir) / f"train_job_{job.id}"
+    yaml_candidate = train_dir / "data.yaml"
+    if yaml_candidate.exists():
+        yaml_path = str(yaml_candidate)
+    else:
+        raise RuntimeError("Cannot find data.yaml for this job")
+
+    run_dir = Path(job.run_dir) if job.run_dir else Path(settings.models_dir) / f"runs/job_{job.id}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    log_path = run_dir / "training.log"
+
+    cmd = [
+        sys.executable, "-u", "-c",
+        f"""
+import sys
+sys.stdout.reconfigure(line_buffering=True)
+from ultralytics import YOLO
+model = YOLO('{last_pt}')
+results = model.train(
+    data='{yaml_path}',
+    epochs={job.epochs},
+    batch={job.batch_size},
+    imgsz={job.img_size},
+    project='{run_dir}',
+    name='train',
+    exist_ok=True,
+    verbose=True,
+    resume=True,
+)
+print("TRAINING_COMPLETE")
+"""
+    ]
+
+    log_file = open(log_path, "a")
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    _active_processes[job.id] = proc
+    _log_subscribers.setdefault(job.id, [])
+
+    job.status = "running"
+    job.pid = proc.pid
+    db.commit()
+
+    thread = threading.Thread(
+        target=_stream_output,
+        args=(job.id, proc, log_file),
+        daemon=True,
+    )
+    thread.start()
+
+    return job
+
+
+def cancel_training(job_id: int) -> bool:
+    """Stop a running job forcefully (cancel)."""
+    proc = _active_processes.get(job_id)
+    if proc and proc.poll() is None:
+        proc.kill()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        return True
+    return False
+
+
 def get_job_status(db: Session, job_id: int) -> dict[str, Any]:
     job = db.query(TrainingJob).filter(TrainingJob.id == job_id).first()
     if not job:

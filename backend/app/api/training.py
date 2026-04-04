@@ -133,6 +133,43 @@ def stop_job(job_id: int, db: Session = Depends(get_db)):
     raise HTTPException(400, "Job not running or not found")
 
 
+@router.post("/training/jobs/{job_id}/resume")
+def resume_job(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(TrainingJob).filter(TrainingJob.id == job_id).first()
+    if not job:
+        raise HTTPException(404, "Job not found")
+    if job.status not in ("stopped", "failed"):
+        raise HTTPException(400, f"Cannot resume job with status '{job.status}'")
+    try:
+        job = svc.resume_training(db, job)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to resume training: {e}")
+    return _job_dict(job)
+
+
+@router.post("/training/jobs/{job_id}/cancel")
+def cancel_job(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(TrainingJob).filter(TrainingJob.id == job_id).first()
+    if not job:
+        raise HTTPException(404, "Job not found")
+    svc.cancel_training(job_id)
+    job.status = "cancelled"
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/training/jobs/{job_id}")
+def delete_job(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(TrainingJob).filter(TrainingJob.id == job_id).first()
+    if not job:
+        raise HTTPException(404, "Job not found")
+    if job.status == "running":
+        svc.cancel_training(job_id)
+    db.delete(job)
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/training/jobs/{job_id}/metrics")
 def get_metrics(job_id: int, db: Session = Depends(get_db)):
     job = db.query(TrainingJob).filter(TrainingJob.id == job_id).first()

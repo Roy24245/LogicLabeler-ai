@@ -1,122 +1,156 @@
 import { type ReactNode } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
-  AppBar,
-  Box,
-  Drawer,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  Typography,
-  Divider,
+  AppBar, Box, Drawer, IconButton, List, ListItemButton, ListItemIcon,
+  ListItemText, Toolbar, Typography, Tooltip, ToggleButtonGroup, ToggleButton,
+  useTheme, alpha,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
-import DashboardIcon from '@mui/icons-material/Dashboard'
-import StorageIcon from '@mui/icons-material/Storage'
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
-import ModelTrainingIcon from '@mui/icons-material/ModelTraining'
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import SettingsIcon from '@mui/icons-material/Settings'
+import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded'
+import StorageRoundedIcon from '@mui/icons-material/StorageRounded'
+import AutoFixHighRoundedIcon from '@mui/icons-material/AutoFixHighRounded'
+import ModelTrainingRoundedIcon from '@mui/icons-material/ModelTrainingRounded'
+import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded'
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded'
+import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded'
+import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded'
+import SettingsBrightnessRoundedIcon from '@mui/icons-material/SettingsBrightnessRounded'
 import { useStore } from '../../store/useStore'
 
-const DRAWER_WIDTH = 260
+const DRAWER_WIDTH = 280
 
 const NAV_ITEMS = [
-  { text: '儀表板', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: '數據集', icon: <StorageIcon />, path: '/datasets' },
-  { text: '自動標註', icon: <AutoFixHighIcon />, path: '/auto-label' },
-  { text: 'YOLO 訓練', icon: <ModelTrainingIcon />, path: '/training' },
-  { text: '數據增強', icon: <AutoAwesomeIcon />, path: '/augmentation' },
-  { text: '系統設定', icon: <SettingsIcon />, path: '/settings' },
+  { text: '儀表板', icon: <DashboardRoundedIcon />, path: '/dashboard' },
+  { text: '數據集', icon: <StorageRoundedIcon />, path: '/datasets' },
+  { text: '自動標註', icon: <AutoFixHighRoundedIcon />, path: '/auto-label' },
+  { text: 'YOLO 訓練', icon: <ModelTrainingRoundedIcon />, path: '/training' },
+  { text: '數據增強', icon: <AutoAwesomeRoundedIcon />, path: '/augmentation' },
+  { text: '系統設定', icon: <SettingsRoundedIcon />, path: '/settings' },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { sidebarOpen, toggleSidebar } = useStore()
+  const theme = useTheme()
+  const { sidebarOpen, toggleSidebar, themeMode, setThemeMode } = useStore()
+
+  const isDark = theme.palette.mode === 'dark'
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar
         position="fixed"
         sx={{
           zIndex: (t) => t.zIndex.drawer + 1,
           backdropFilter: 'blur(20px)',
-          backgroundColor: 'rgba(15, 22, 41, 0.8)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          boxShadow: 'none',
+          bgcolor: alpha(theme.palette.background.paper, 0.85),
+          borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <Toolbar>
-          <IconButton color="inherit" edge="start" onClick={toggleSidebar} sx={{ mr: 2 }}>
+        <Toolbar sx={{ gap: 1 }}>
+          <IconButton onClick={toggleSidebar} sx={{ color: 'text.primary' }}>
             <MenuIcon />
           </IconButton>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
             <Box
               sx={{
-                width: 32,
-                height: 32,
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #7C4DFF 0%, #00E5FF 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: 14,
+                width: 36, height: 36, borderRadius: '12px',
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${isDark ? '#CCC2DC' : '#625B71'} 100%)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 800, fontSize: 13, color: isDark ? '#1D1B20' : '#FFF',
+                letterSpacing: '-0.5px',
               }}
             >
               LL
             </Box>
-            <Typography variant="h6" noWrap>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
               LogicLabeler
             </Typography>
           </Box>
+
+          <ToggleButtonGroup
+            value={themeMode}
+            exclusive
+            onChange={(_, v) => v && setThemeMode(v)}
+            size="small"
+            sx={{
+              bgcolor: alpha(theme.palette.primary.main, 0.08),
+              borderRadius: 3,
+              '& .MuiToggleButton-root': {
+                border: 'none', borderRadius: '12px !important', px: 1.2, py: 0.5,
+                color: 'text.secondary',
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.16),
+                  color: 'primary.main',
+                },
+              },
+            }}
+          >
+            <ToggleButton value="light"><Tooltip title="亮色"><LightModeRoundedIcon fontSize="small" /></Tooltip></ToggleButton>
+            <ToggleButton value="system"><Tooltip title="跟隨系統"><SettingsBrightnessRoundedIcon fontSize="small" /></Tooltip></ToggleButton>
+            <ToggleButton value="dark"><Tooltip title="暗色"><DarkModeRoundedIcon fontSize="small" /></Tooltip></ToggleButton>
+          </ToggleButtonGroup>
         </Toolbar>
       </AppBar>
 
       <Drawer
-        variant="persistent"
-        open={sidebarOpen}
+        variant="permanent"
         sx={{
           width: sidebarOpen ? DRAWER_WIDTH : 0,
           flexShrink: 0,
-          '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '& .MuiDrawer-paper': {
+            width: DRAWER_WIDTH,
+            boxSizing: 'border-box',
+            transform: sidebarOpen ? 'none' : `translateX(-${DRAWER_WIDTH}px)`,
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            overflowX: 'hidden',
+          },
         }}
       >
         <Toolbar />
-        <Box sx={{ overflow: 'auto', mt: 1 }}>
-          <List>
-            {NAV_ITEMS.map((item) => (
-              <ListItemButton
-                key={item.path}
-                selected={location.pathname.startsWith(item.path)}
-                onClick={() => navigate(item.path)}
-                sx={{
-                  mx: 1,
-                  borderRadius: 2,
-                  mb: 0.5,
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(124, 77, 255, 0.15)',
-                    '&:hover': { backgroundColor: 'rgba(124, 77, 255, 0.25)' },
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItemButton>
-            ))}
+        <Box sx={{ overflow: 'auto', mt: 1, px: 0.5 }}>
+          <List sx={{ px: 0.5 }}>
+            {NAV_ITEMS.map((item) => {
+              const active = location.pathname.startsWith(item.path)
+              return (
+                <ListItemButton
+                  key={item.path}
+                  selected={active}
+                  onClick={() => navigate(item.path)}
+                  sx={{
+                    mb: 0.5,
+                    py: 1.2,
+                    pl: 2,
+                    '&.Mui-selected': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.12),
+                      color: 'primary.main',
+                      '& .MuiListItemIcon-root': { color: 'primary.main' },
+                      '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.16) },
+                    },
+                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.06) },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 44, color: active ? 'primary.main' : 'text.secondary' }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.text}
+                    primaryTypographyProps={{ fontWeight: active ? 600 : 400, fontSize: 14 }}
+                  />
+                </ListItemButton>
+              )
+            })}
           </List>
-          <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.06)' }} />
-          <Box sx={{ px: 3, pb: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              LogicLabeler v1.0
+
+          <Box sx={{ px: 2.5, mt: 'auto', pt: 3, pb: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.6 }}>
+              LogicLabeler v2.0
             </Typography>
             <br />
-            <Typography variant="caption" color="text.secondary">
-              MLLM + Multi-Agent
+            <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.6 }}>
+              Material 3 Design
             </Typography>
           </Box>
         </Box>
@@ -126,10 +160,11 @@ export default function Layout({ children }: { children: ReactNode }) {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 2, md: 3 },
           mt: 8,
-          transition: 'margin 0.3s',
-          ml: sidebarOpen ? 0 : `-${DRAWER_WIDTH}px`,
+          transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          minWidth: 0,
+          overflow: 'auto',
         }}
       >
         {children}
