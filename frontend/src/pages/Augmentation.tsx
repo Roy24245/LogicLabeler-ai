@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Box, Button, Card, CardContent, Checkbox, Chip, FormControl,
-  FormControlLabel, Grid, InputLabel, MenuItem, Select, Typography,
+  FormControlLabel, Grid, InputLabel, MenuItem, Select, Switch, TextField, Typography,
   Alert, LinearProgress,
 } from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import LabelIcon from '@mui/icons-material/Label'
 import { getDatasets, getSettings, runAugmentation, getAugmentationJob, type Dataset, type Settings, type AugJobStatus } from '../api/client'
 import { useStore } from '../store/useStore'
 
@@ -18,6 +19,14 @@ const VARIATION_TYPES = [
   { id: 'shadow_change', label: '陰影變化', desc: '改變光源方向和陰影強度' },
 ]
 
+const STATUS_LABELS: Record<string, string> = {
+  pending: '準備中',
+  augmenting: '圖片增強中',
+  labeling: '自動標註中',
+  completed: '已完成',
+  failed: '失敗',
+}
+
 export default function Augmentation() {
   const { showSnackbar } = useStore()
   const [datasets, setDatasets] = useState<Dataset[]>([])
@@ -26,7 +35,10 @@ export default function Augmentation() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['angle_change'])
   const [running, setRunning] = useState(false)
   const [jobStatus, setJobStatus] = useState<AugJobStatus | null>(null)
+  const [autoLabel, setAutoLabel] = useState(true)
+  const [labelInstruction, setLabelInstruction] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const logEndRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -38,6 +50,12 @@ export default function Augmentation() {
     })()
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
+
+  useEffect(() => {
+    if (logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [jobStatus?.logs?.length])
 
   const toggleType = (id: string) => {
     setSelectedTypes((prev) =>
@@ -56,15 +74,19 @@ export default function Augmentation() {
           pollRef.current = null
           setRunning(false)
           if (data.status === 'completed') {
-            showSnackbar(`增強完成：成功生成 ${data.successfully_created} 張圖片`, 'success')
+            let msg = `增強完成：成功生成 ${data.successfully_created} 張圖片`
+            if (data.auto_label && data.total_annotations > 0) {
+              msg += `，自動標註 ${data.labeled_count} 張 (${data.total_annotations} 個標註)`
+            }
+            showSnackbar(msg, 'success')
           } else {
-            showSnackbar(`增強失敗：${data.error || '未知錯誤'}`, 'error')
+            showSnackbar(`任務失敗：${data.error || '未知錯誤'}`, 'error')
           }
         }
       } catch {
         /* polling error, will retry */
       }
-    }, 3000)
+    }, 2000)
   }
 
   const handleRun = async () => {
@@ -76,6 +98,8 @@ export default function Augmentation() {
       const { data } = await runAugmentation({
         dataset_id: selectedDs,
         variation_types: selectedTypes,
+        auto_label: autoLabel,
+        label_instruction: labelInstruction,
       })
       showSnackbar(data.message, 'info')
       startPolling(data.job_id)
@@ -89,6 +113,8 @@ export default function Augmentation() {
   const progressPct = jobStatus && jobStatus.total > 0
     ? Math.round((jobStatus.processed / jobStatus.total) * 100)
     : 0
+
+  const statusPhase = jobStatus ? (STATUS_LABELS[jobStatus.status] || jobStatus.status) : ''
 
   return (
     <Box>
@@ -104,6 +130,7 @@ export default function Augmentation() {
       )}
 
       <Grid container spacing={3}>
+        {/* Left: Config */}
         <Grid item xs={12} md={5}>
           <Card>
             <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
@@ -112,7 +139,7 @@ export default function Augmentation() {
               <FormControl fullWidth>
                 <InputLabel>選擇數據集</InputLabel>
                 <Select label="選擇數據集" value={selectedDs}
-                  onChange={(e) => setSelectedDs(Number(e.target.value))}>
+                  onChange={(e) => setSelectedDs(Number(e.target.value))} disabled={running}>
                   <MenuItem value={0} disabled>-- 請選擇 --</MenuItem>
                   {datasets.map((d) => (
                     <MenuItem key={d.id} value={d.id}>{d.name} ({d.image_count} 張)</MenuItem>
@@ -142,31 +169,64 @@ export default function Augmentation() {
                 ))}
               </Box>
 
+              {/* Auto-label section */}
+              <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
+                <FormControlLabel
+                  control={<Switch checked={autoLabel} onChange={(e) => setAutoLabel(e.target.checked)} disabled={running} />}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <LabelIcon fontSize="small" />
+                      <Typography variant="subtitle2">生成後自動標註</Typography>
+                    </Box>
+                  }
+                />
+                {autoLabel && (
+                  <TextField
+                    fullWidth size="small" sx={{ mt: 1.5 }}
+                    label="標註指令（選填）"
+                    placeholder="例如: 檢測圖片中的行人、車輛和交通號誌"
+                    value={labelInstruction}
+                    onChange={(e) => setLabelInstruction(e.target.value)}
+                    disabled={running}
+                    helperText="留空則自動使用數據集已有的類別進行檢測"
+                  />
+                )}
+              </Box>
+
               <Button
                 variant="contained" size="large" fullWidth
                 startIcon={<PlayArrowIcon />}
                 onClick={handleRun}
                 disabled={running || !!isDisabled}
               >
-                {running ? '增強進行中...' : '開始數據增強'}
+                {running ? '任務進行中...' : '開始數據增強'}
               </Button>
 
+              {/* Progress */}
               {running && jobStatus && (
                 <Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography variant="body2" color="text.secondary">
-                      進度: {jobStatus.processed} / {jobStatus.total}
+                      {statusPhase}
+                      {jobStatus.status === 'augmenting' && ` ${jobStatus.processed}/${jobStatus.total}`}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {progressPct}%
-                    </Typography>
+                    {jobStatus.status === 'augmenting' && (
+                      <Typography variant="body2" color="text.secondary">{progressPct}%</Typography>
+                    )}
                   </Box>
-                  <LinearProgress variant="determinate" value={progressPct} />
-                  {jobStatus.successfully_created > 0 && (
-                    <Typography variant="caption" color="success.main" sx={{ mt: 0.5 }}>
-                      已成功生成 {jobStatus.successfully_created} 張
-                    </Typography>
-                  )}
+                  <LinearProgress
+                    variant={jobStatus.status === 'labeling' ? 'indeterminate' : 'determinate'}
+                    value={progressPct}
+                    color={jobStatus.status === 'labeling' ? 'secondary' : 'primary'}
+                  />
+                  <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap' }}>
+                    {jobStatus.successfully_created > 0 && (
+                      <Chip label={`生成 ${jobStatus.successfully_created} 張`} color="success" size="small" variant="outlined" />
+                    )}
+                    {jobStatus.total_annotations > 0 && (
+                      <Chip label={`標註 ${jobStatus.total_annotations} 個`} color="info" size="small" variant="outlined" />
+                    )}
+                  </Box>
                 </Box>
               )}
               {running && !jobStatus && <LinearProgress />}
@@ -174,28 +234,67 @@ export default function Augmentation() {
           </Card>
         </Grid>
 
+        {/* Right: Logs */}
         <Grid item xs={12} md={7}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>增強說明</Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                數據增強功能使用 qwen-image-2.0-pro 圖像生成模型，以現有數據集中的圖片為基底，
-                通過條件化變換生成多樣化的訓練樣本。
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                變換嚴格遵循「只修改非核心語義屬性」的原則，保留所有目標物體的類型、位置和大小，
-                僅調整拍攝角度、光照條件、天氣狀況等環境因素。
-              </Typography>
-              <Alert severity="info" sx={{ mt: 1, mb: 2 }}>
-                為避免 API 速率限制，每個生成任務之間會自動間隔 3 秒。
-                批量增強會在後台執行，頁面會自動更新進度。
-              </Alert>
-              <Typography variant="subtitle2" sx={{ mt: 2 }}>支持的變換維度：</Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                {VARIATION_TYPES.map((v) => (
-                  <Chip key={v.id} label={v.label} variant="outlined" size="small" />
-                ))}
+          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', pb: '16px !important' }}>
+              <Typography variant="h6" gutterBottom>實時日誌</Typography>
+
+              <Box
+                sx={{
+                  flex: 1,
+                  minHeight: 400,
+                  maxHeight: 600,
+                  overflow: 'auto',
+                  bgcolor: '#1e1e1e',
+                  color: '#d4d4d4',
+                  borderRadius: 1,
+                  p: 1.5,
+                  fontFamily: '"Cascadia Code", "Fira Code", "JetBrains Mono", monospace',
+                  fontSize: '0.8rem',
+                  lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {(!jobStatus || jobStatus.logs.length === 0) ? (
+                  <Typography variant="body2" sx={{ color: '#666', fontFamily: 'inherit' }}>
+                    等待任務開始...
+                  </Typography>
+                ) : (
+                  jobStatus.logs.map((line, i) => {
+                    let color = '#d4d4d4'
+                    if (line.includes('[ERROR]') || line.includes('✗')) color = '#f44747'
+                    else if (line.includes('✓') || line.includes('成功') || line.includes('完成')) color = '#6a9955'
+                    else if (line.startsWith('===')) color = '#569cd6'
+                    else if (line.includes('[Commander]') || line.includes('[Soldier]') || line.includes('[Critic]')) color = '#dcdcaa'
+                    else if (line.includes('[增強]')) color = '#ce9178'
+                    else if (line.includes('[Review]') || line.includes('[RAG]')) color = '#c586c0'
+
+                    return (
+                      <Box key={i} component="span" sx={{ display: 'block', color }}>
+                        {line}
+                      </Box>
+                    )
+                  })
+                )}
+                <div ref={logEndRef} />
               </Box>
+
+              {/* Summary after completion */}
+              {jobStatus?.status === 'completed' && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  任務完成 — 生成 {jobStatus.successfully_created} 張圖片
+                  {jobStatus.auto_label && jobStatus.total_annotations > 0 && (
+                    <>，自動標註 {jobStatus.labeled_count} 張（共 {jobStatus.total_annotations} 個標註）</>
+                  )}
+                </Alert>
+              )}
+              {jobStatus?.status === 'failed' && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  任務失敗：{jobStatus.error || '未知錯誤'}
+                </Alert>
+              )}
             </CardContent>
           </Card>
         </Grid>

@@ -18,6 +18,7 @@ import {
   type Dataset,
 } from '../api/client'
 import { useStore } from '../store/useStore'
+import PreprocessDialog from '../components/PreprocessDialog'
 
 export default function Datasets() {
   const navigate = useNavigate()
@@ -28,6 +29,8 @@ export default function Datasets() {
   const [importFormat, setImportFormat] = useState('yolo')
   const [importFile, setImportFile] = useState<File | null>(null)
   const [form, setForm] = useState({ name: '', description: '', task_type: 'detection' })
+  const [exportPreprocessOpen, setExportPreprocessOpen] = useState(false)
+  const [exportTargetId, setExportTargetId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -63,17 +66,28 @@ export default function Datasets() {
     }
   }
 
-  const handleExport = async (id: number, e: React.MouseEvent) => {
+  const handleExportClick = (id: number, e: React.MouseEvent) => {
     e.stopPropagation()
+    setExportTargetId(id)
+    setExportPreprocessOpen(true)
+  }
+
+  const handleExportWithPreprocess = async (config: { augmentations: string[]; preprocessing: Record<string, any> }) => {
+    setExportPreprocessOpen(false)
+    if (!exportTargetId) return
     try {
-      const { data } = await exportDataset(id)
+      const { data } = await exportDataset(
+        exportTargetId,
+        config.augmentations.length > 0 ? config.augmentations : undefined,
+        Object.keys(config.preprocessing).length > 0 ? config.preprocessing : undefined,
+      )
       const url = window.URL.createObjectURL(new Blob([data]))
       const a = document.createElement('a')
       a.href = url
-      a.download = `dataset_${id}_yolo.zip`
+      a.download = `dataset_${exportTargetId}_yolo.zip`
       a.click()
       window.URL.revokeObjectURL(url)
-      showSnackbar('導出完成', 'success')
+      showSnackbar('導出完成' + (config.augmentations.length > 0 ? `（含 ${config.augmentations.length} 項增強）` : ''), 'success')
     } catch {
       showSnackbar('導出失敗', 'error')
     }
@@ -144,7 +158,7 @@ export default function Datasets() {
                 >
                   <UploadFileIcon fontSize="small" />
                 </IconButton>
-                <IconButton size="small" title="導出 YOLO" onClick={(e) => handleExport(ds.id, e)}>
+                <IconButton size="small" title="導出 YOLO" onClick={(e) => handleExportClick(ds.id, e)}>
                   <DownloadIcon fontSize="small" />
                 </IconButton>
                 <IconButton size="small" title="刪除" onClick={(e) => handleDelete(ds.id, e)} color="error">
@@ -232,6 +246,15 @@ export default function Datasets() {
           <Button variant="contained" onClick={handleImport} disabled={!importFile}>導入</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Export Preprocessing Dialog */}
+      <PreprocessDialog
+        open={exportPreprocessOpen}
+        onClose={() => setExportPreprocessOpen(false)}
+        onConfirm={handleExportWithPreprocess}
+        title="導出前預處理與增強"
+        confirmLabel="導出數據集"
+      />
     </Box>
   )
 }

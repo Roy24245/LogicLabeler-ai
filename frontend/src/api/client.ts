@@ -89,8 +89,16 @@ export const importDataset = (id: number, file: File, format: string) => {
   fd.append('file', file)
   return api.post(`/datasets/${id}/import?format=${format}`, fd)
 }
-export const exportDataset = (id: number) =>
-  api.get(`/datasets/${id}/export?format=yolo`, { responseType: 'blob' })
+export const exportDataset = (id: number, augmentations?: string[], preprocessing?: Record<string, any>) => {
+  if (augmentations?.length || (preprocessing && Object.keys(preprocessing).length)) {
+    return api.post(`/datasets/${id}/export`, {
+      format: 'yolo',
+      augmentations: augmentations || [],
+      preprocessing: preprocessing || {},
+    }, { responseType: 'blob' })
+  }
+  return api.get(`/datasets/${id}/export?format=yolo`, { responseType: 'blob' })
+}
 
 // Images
 export const getImages = (datasetId: number, skip = 0, limit = 50, filters?: { labeled?: boolean; class_name?: string; split?: string; search?: string }) => {
@@ -157,6 +165,15 @@ export const getReviewStatus = (jobId: number) =>
 export const applyReviewFixes = (jobId: number) =>
   api.post(`/labeling/review/${jobId}/apply`)
 
+// Preprocessing
+export interface TransformInfo {
+  id: string
+  label: string
+  category: string
+}
+export const getAvailableTransforms = () =>
+  api.get<{ augmentations: TransformInfo[]; preprocessing: TransformInfo[] }>('/preprocessing/transforms')
+
 // Training
 export const startTraining = (data: {
   dataset_id: number
@@ -164,6 +181,10 @@ export const startTraining = (data: {
   epochs?: number
   batch_size?: number
   img_size?: number
+  preprocess?: {
+    preprocessing: Record<string, any>
+    augmentations: string[]
+  }
 }) => api.post('/training/start', data)
 export const getTrainingJobs = () => api.get<TrainingJobItem[]>('/training/jobs')
 export const getTrainingJob = (id: number) => api.get<TrainingJobItem>(`/training/jobs/${id}`)
@@ -175,16 +196,22 @@ export const getTrainingLog = (id: number) => api.get<{ log: string }>(`/trainin
 // Augmentation
 export interface AugJobStatus {
   id: number
-  status: 'pending' | 'running' | 'completed' | 'failed'
+  status: 'pending' | 'augmenting' | 'labeling' | 'completed' | 'failed'
   total: number
   processed: number
   successfully_created: number
+  labeled_count: number
+  total_annotations: number
+  auto_label: boolean
+  logs: string[]
   error: string | null
 }
 export const runAugmentation = (data: {
   dataset_id: number
   variation_types: string[]
   image_ids?: number[]
+  auto_label?: boolean
+  label_instruction?: string
 }) => api.post<{ job_id: number; total_requested: number; status: string; message: string }>('/augmentation/run', data)
 export const getAugmentationJob = (jobId: number) =>
   api.get<AugJobStatus>(`/augmentation/jobs/${jobId}`)

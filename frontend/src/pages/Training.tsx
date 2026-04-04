@@ -10,6 +10,7 @@ import StopIcon from '@mui/icons-material/Stop'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import ImageIcon from '@mui/icons-material/Image'
 import CloseIcon from '@mui/icons-material/Close'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
@@ -19,6 +20,7 @@ import {
   type Dataset, type TrainingJobItem,
 } from '../api/client'
 import { useStore } from '../store/useStore'
+import PreprocessDialog from '../components/PreprocessDialog'
 
 const MODEL_OPTIONS = ['yolov8n', 'yolov8s', 'yolov8m', 'yolov8l', 'yolov8x', 'yolo11n', 'yolo11s', 'yolo11m']
 
@@ -33,6 +35,7 @@ export default function Training() {
   const [logText, setLogText] = useState('')
   const [tab, setTab] = useState(0)
   const [previewImg, setPreviewImg] = useState<string | null>(null)
+  const [preprocessOpen, setPreprocessOpen] = useState(false)
   const logRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -47,11 +50,23 @@ export default function Training() {
 
   useEffect(() => { loadJobs() }, [loadJobs])
 
-  const handleStart = async () => {
+  const handleStartClick = () => {
     if (!form.dataset_id) { showSnackbar('請選擇數據集', 'error'); return }
+    setPreprocessOpen(true)
+  }
+
+  const handlePreprocessConfirm = async (config: { augmentations: string[]; preprocessing: Record<string, any> }) => {
+    setPreprocessOpen(false)
     try {
-      const { data } = await startTraining(form)
-      showSnackbar('訓練已啟動', 'success')
+      const payload: any = { ...form }
+      if (config.augmentations.length > 0 || Object.keys(config.preprocessing).length > 0) {
+        payload.preprocess = {
+          augmentations: config.augmentations,
+          preprocessing: config.preprocessing,
+        }
+      }
+      const { data } = await startTraining(payload)
+      showSnackbar('訓練已啟動' + (config.augmentations.length > 0 ? `（含 ${config.augmentations.length} 項增強）` : ''), 'success')
       loadJobs()
       openJobDetail(data)
     } catch (e: any) {
@@ -173,7 +188,7 @@ export default function Training() {
                 onChange={(e) => setForm({ ...form, batch_size: +e.target.value })} />
               <TextField label="Image Size" type="number" value={form.img_size}
                 onChange={(e) => setForm({ ...form, img_size: +e.target.value })} />
-              <Button variant="contained" size="large" startIcon={<PlayArrowIcon />} onClick={handleStart}>
+              <Button variant="contained" size="large" startIcon={<PlayArrowIcon />} onClick={handleStartClick}>
                 開始訓練
               </Button>
             </CardContent>
@@ -348,6 +363,15 @@ export default function Training() {
           {previewImg && <img src={previewImg} style={{ maxWidth: '100%', borderRadius: 8 }} alt="artifact" />}
         </DialogContent>
       </Dialog>
+
+      {/* Preprocessing / Augmentation Dialog */}
+      <PreprocessDialog
+        open={preprocessOpen}
+        onClose={() => setPreprocessOpen(false)}
+        onConfirm={handlePreprocessConfirm}
+        title="訓練前預處理與增強"
+        confirmLabel="開始訓練"
+      />
     </Box>
   )
 }

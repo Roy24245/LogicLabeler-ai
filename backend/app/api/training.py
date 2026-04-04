@@ -1,6 +1,7 @@
 """Training API — YOLO model training management."""
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
@@ -10,10 +11,17 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import TrainingJob
+from app.models import Annotation, Image, TrainingJob
 from app.services import training_service as svc
+from app.services import preprocessing as preproc
 
 router = APIRouter(tags=["training"])
+logger = logging.getLogger(__name__)
+
+
+class PreprocessingConfig(BaseModel):
+    preprocessing: dict = {}
+    augmentations: list[str] = []
 
 
 class TrainingStart(BaseModel):
@@ -22,6 +30,7 @@ class TrainingStart(BaseModel):
     epochs: int = 100
     batch_size: int = 16
     img_size: int = 640
+    preprocess: PreprocessingConfig | None = None
 
 
 @router.post("/training/start")
@@ -38,6 +47,10 @@ def start_training(body: TrainingStart, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(job)
 
+    if body.preprocess and body.preprocess.augmentations:
+        logger.info("Applying %d augmentations before training job %d", len(body.preprocess.augmentations), job.id)
+        _apply_augmentations_to_dataset(db, body.dataset_id, body.preprocess.augmentations)
+
     try:
         job = svc.start_training(db, job)
     except Exception as e:
@@ -46,6 +59,52 @@ def start_training(body: TrainingStart, db: Session = Depends(get_db)):
         raise HTTPException(500, f"Failed to start training: {e}")
 
     return _job_dict(job)
+
+
+def _apply_augmentations_to_dataset(db: Session, dataset_id: int, transforms: list[str]):
+    """Apply local augmentations to all images in a dataset, creating new images+annotations."""
+    from app.config import settings
+    images = db.query(Image).filter(Image.dataset_id == dataset_id).all()
+    output_dir = str(settings.datasets_dir / str(dataset_id) / "images")
+    created = 0
+    for img in images:
+        anns = db.query(Annotation).filter(Annotation.image_id == img.id).all()
+        bboxes = []
+        for a in anns:
+            if a.bbox:
+                bboxes.append({**a.bbox, "_class_name": a.class_name, "_confidence": a.confidence, "_source": a.source})
+        results = preproc.apply_transforms(img.filepath, bboxes, transforms, output_dir)
+        for r in results:
+            new_img = Image(
+                dataset_id=dataset_id,
+                filename=r["filename"],
+                filepath=r["filepath"],
+                width=r["width"],
+                height=r["height"],
+                is_augmented=True,
+            )
+            db.add(new_img)
+            db.flush()
+            for bb in r["bboxes"]:
+                ann = Annotation(
+                    image_id=new_img.id,
+                    class_name=bb.get("_class_name", "unknown"),
+                    bbox={"x": bb["x"], "y": bb["y"], "w": bb["w"], "h": bb["h"]},
+                    confidence=bb.get("_confidence"),
+                    source="augmented_local",
+                )
+                db.add(ann)
+            created += 1
+    db.commit()
+    logger.info("Local augmentation created %d new images for dataset %d", created, dataset_id)
+
+
+@router.get("/preprocessing/transforms")
+def list_transforms():
+    return {
+        "augmentations": preproc.get_available_transforms(),
+        "preprocessing": preproc.get_available_preprocessing(),
+    }
 
 
 @router.get("/training/jobs")

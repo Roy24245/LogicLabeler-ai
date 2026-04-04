@@ -247,6 +247,12 @@ async def import_dataset(
     return {"ok": True, "message": f"Imported {format} dataset"}
 
 
+class ExportRequest(BaseModel):
+    format: str = "yolo"
+    augmentations: list[str] = []
+    preprocessing: dict = {}
+
+
 @router.get("/datasets/{dataset_id}/export")
 def export_dataset(
     dataset_id: int,
@@ -255,6 +261,31 @@ def export_dataset(
 ):
     if format != "yolo":
         raise HTTPException(400, "Only YOLO export is currently supported")
+    try:
+        zip_bytes = svc.export_yolo(db, dataset_id)
+    except ValueError:
+        raise HTTPException(404, "Dataset not found")
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=dataset_{dataset_id}_yolo.zip"},
+    )
+
+
+@router.post("/datasets/{dataset_id}/export")
+def export_dataset_with_preprocess(
+    dataset_id: int,
+    body: ExportRequest,
+    db: Session = Depends(get_db),
+):
+    """Export dataset with optional local augmentations applied to the export."""
+    if body.format != "yolo":
+        raise HTTPException(400, "Only YOLO export is currently supported")
+
+    if body.augmentations:
+        from app.api.training import _apply_augmentations_to_dataset
+        _apply_augmentations_to_dataset(db, dataset_id, body.augmentations)
+
     try:
         zip_bytes = svc.export_yolo(db, dataset_id)
     except ValueError:
