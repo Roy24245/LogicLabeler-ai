@@ -54,16 +54,11 @@ export default function Layout({ children }: { children: ReactNode }) {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
             <Box
-              sx={{
-                width: 36, height: 36, borderRadius: '12px',
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${isDark ? '#CCC2DC' : '#625B71'} 100%)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 800, fontSize: 13, color: isDark ? '#1D1B20' : '#FFF',
-                letterSpacing: '-0.5px',
-              }}
-            >
-              LL
-            </Box>
+              component="img"
+              src="/logo.png"
+              alt="LogicLabeler Logo"
+              sx={{ width: 36, height: 36, borderRadius: '8px', objectFit: 'contain' }}
+            />
             <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
               LogicLabeler
             </Typography>

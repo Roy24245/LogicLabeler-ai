@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./logiclabeler_logo.png" alt="LogicLabeler Logo" width="150" />
+
 # LogicLabeler
 
 **基於 MLLM 語義推理與多智能體協作的下一代自動標註系統**
