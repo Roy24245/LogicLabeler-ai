@@ -1,6 +1,6 @@
-<div align="center">
 
-<img src="./logiclabeler_logo.png" alt="LogicLabeler Logo" width="150" />
+
+
 
 # LogicLabeler
 
@@ -8,25 +8,24 @@
 
 *讓自動標註不僅能「看見」物體，還能「理解」物體之間的關係與狀態。*
 
-<br/>
+  
 
-<img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-<img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white" />
-<img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
-<img src="https://img.shields.io/badge/MUI-6-007FFF?style=for-the-badge&logo=mui&logoColor=white" />
-<img src="https://img.shields.io/badge/YOLO-v8%2Fv11-00FFFF?style=for-the-badge&logo=yolo&logoColor=white" />
-<img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
-<img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 
-<br/><br/>
 
-| 傳統工具能做的 | LogicLabeler 額外能做的 |
-|:---:|:---:|
+
+  
+  
+
+
+
+| 傳統工具能做的      | LogicLabeler 額外能做的  |
+| ------------ | ------------------- |
 | 「標出所有**工人**」 | 「標出所有**未佩戴安全帽**的工人」 |
-| 「標出所有**卡車**」 | 「標出所有**正在卸貨**的卡車」 |
-| 「標出所有**車輛**」 | 「標出**停在禁停區域內**的車輛」 |
+| 「標出所有**卡車**」 | 「標出所有**正在卸貨**的卡車」   |
+| 「標出所有**車輛**」 | 「標出**停在禁停區域內**的車輛」  |
 
-</div>
+
+
 
 ---
 
@@ -51,19 +50,21 @@
 
 在深度學習時代，高品質標註數據是 AI 系統落地的最大瓶頸。
 
-| 痛點 | 現狀 | LogicLabeler 的解法 |
-|------|------|---------------------|
-|  人工標註成本高昂 | 單張複雜圖片 $0.5–2 | 多智能體自動標註，人力成本趨近零 |
-|  標註效率低 | 標註員逐張手動框選 | 批量自動標註 + AI 審查，速度提升數十倍 |
-|  一致性差 | 不同標註員標準不一 | 對抗式品質驗證 + RAG 記憶確保一致性 |
-|  無法理解語義 | 只能做名詞檢測 | Chain-of-Thought 推理支持複合邏輯指令 |
-|  標註與訓練割裂 | 多平台切換 | 從標註、增強到 YOLO 訓練的一站式閉環 |
+
+| 痛點       | 現狀            | LogicLabeler 的解法            |
+| -------- | ------------- | --------------------------- |
+| 人工標註成本高昂 | 單張複雜圖片 $0.5–2 | 多智能體自動標註，人力成本趨近零            |
+| 標註效率低    | 標註員逐張手動框選     | 批量自動標註 + AI 審查，速度提升數十倍      |
+| 一致性差     | 不同標註員標準不一     | 對抗式品質驗證 + RAG 記憶確保一致性       |
+| 無法理解語義   | 只能做名詞檢測       | Chain-of-Thought 推理支持複合邏輯指令 |
+| 標註與訓練割裂  | 多平台切換         | 從標註、增強到 YOLO 訓練的一站式閉環       |
+
 
 ---
 
 ## 功能亮點
 
-###  多智能體自動標註
+### 多智能體自動標註
 
 採用 **Commander → Soldier → Critic** 三層智能體協作架構，模擬人類團隊模式：
 
@@ -72,7 +73,7 @@
 - **Critic** (Qwen3.5-Plus Vision) — 幾何邏輯校驗 + VLM 裁剪驗證，低置信度觸發辯論機制
 - **Reviewer** — AI 二次審查功能，逐一驗證分類正確性與 BBox 位置精度
 
-###  數據集管理
+### 數據集管理
 
 - **數據集** — 創建 / 刪除 / 批量上傳 / 導入 (YOLO・COCO・Pascal VOC 格式 ZIP) / 導出 YOLO 格式
 - **圖片瀏覽** — 縮圖網格、分頁載入、篩選 (已標註/未標註/增強圖片)、批量操作
@@ -81,7 +82,7 @@
 - **數據分割** — 自動按比例分割 Train / Val / Test，支持手動拖拽調整
 - **數據集統計** — 標註數量、類別分佈、寬高比散點圖、尺寸直方圖
 
-###  AI 數據增強
+### AI 數據增強
 
 利用 **qwen-image-2.0-pro** 圖像編輯模型，基於原圖 + 文字指令生成語義一致的變體圖片：
 
@@ -90,7 +91,7 @@
 - 前端實時增強日誌，自動限速重試
 - 可在系統設定中一鍵開關
 
-###  本地數據預處理
+### 本地數據預處理
 
 訓練/導出前可選擇的 **Roboflow 風格** 本地增強與預處理：
 
@@ -98,7 +99,7 @@
 - **BBox 級** — Cutout、Mosaic
 - **預處理** — 自動調整尺寸、自動方向校正、自適應對比度
 
-###  本地 YOLO 訓練
+### 本地 YOLO 訓練
 
 內建 ultralytics 訓練模塊，無需離開平台：
 
@@ -109,13 +110,13 @@
 - **生命週期管理** — 啟動 / 停止 / 繼續 (從 checkpoint 恢復) / 取消 / 刪除
 - **產出瀏覽** — 直接查看訓練圖表、混淆矩陣、最佳模型權重
 
-###  RAG 自適應進化
+### RAG 自適應進化
 
 - 每次人工修正自動向量化存入 ChromaDB
 - 再次處理相似場景時，自動檢索「歷史教訓」注入 Negative Prompts
 - 越用越聰明，無需重新訓練基礎模型
 
-###  Material Design 3 介面
+### Material Design 3 介面
 
 - 基於 MUI v6 的 Material 3 設計語言
 - 亮色 / 暗色 / 跟隨系統三種主題模式，一鍵切換
@@ -246,22 +247,24 @@
 
 ## 技術棧
 
-| 層級 | 技術 | 說明 |
-|:----:|------|------|
-| **前端** | React 18 + TypeScript + MUI v6 | Material Design 3 響應式介面，亮/暗主題 |
-| **構建** | Vite 6 | 極速 HMR 開發體驗 |
-| **狀態管理** | Zustand 5 | 輕量持久化狀態管理 |
-| **圖表** | Recharts 2 | 訓練曲線與數據統計可視化 |
-| **後端** | Python 3.11 + FastAPI | 異步 REST API + WebSocket |
-| **ORM** | SQLAlchemy + SQLite | 元數據持久化 |
-| **向量庫** | ChromaDB | RAG 錯誤記憶存儲 |
-| **推理引擎** | Qwen3.5-Plus (DashScope) | Commander + Critic 語義推理 |
-| **視覺檢測** | Qwen-VL-Plus / Grounded-SAM | Soldier 雙模式目標檢測 |
-| **圖片生成** | qwen-image-2.0-pro (DashScope) | AI 數據增強（圖像編輯） |
-| **本地增強** | OpenCV + Pillow | Roboflow 風格預處理/增強 |
-| **模型訓練** | ultralytics | YOLOv8 / YOLO11 本地訓練 |
-| **高解析度** | SAHI | 切片推理支持超大尺寸圖像 |
-| **部署** | Docker Compose | 一鍵啟動 3 個微服務 |
+
+| 層級       | 技術                             | 說明                            |
+| -------- | ------------------------------ | ----------------------------- |
+| **前端**   | React 18 + TypeScript + MUI v6 | Material Design 3 響應式介面，亮/暗主題 |
+| **構建**   | Vite 6                         | 極速 HMR 開發體驗                   |
+| **狀態管理** | Zustand 5                      | 輕量持久化狀態管理                     |
+| **圖表**   | Recharts 2                     | 訓練曲線與數據統計可視化                  |
+| **後端**   | Python 3.11 + FastAPI          | 異步 REST API + WebSocket       |
+| **ORM**  | SQLAlchemy + SQLite            | 元數據持久化                        |
+| **向量庫**  | ChromaDB                       | RAG 錯誤記憶存儲                    |
+| **推理引擎** | Qwen3.5-Plus (DashScope)       | Commander + Critic 語義推理       |
+| **視覺檢測** | Qwen-VL-Plus / Grounded-SAM    | Soldier 雙模式目標檢測               |
+| **圖片生成** | qwen-image-2.0-pro (DashScope) | AI 數據增強（圖像編輯）                 |
+| **本地增強** | OpenCV + Pillow                | Roboflow 風格預處理/增強             |
+| **模型訓練** | ultralytics                    | YOLOv8 / YOLO11 本地訓練          |
+| **高解析度** | SAHI                           | 切片推理支持超大尺寸圖像                  |
+| **部署**   | Docker Compose                 | 一鍵啟動 3 個微服務                   |
+
 
 ---
 
@@ -276,7 +279,7 @@
 
 ```bash
 # 1. 克隆項目
-git clone https://github.com/your-org/LogicLabeler.git
+git clone https://github.com/Roy24245/LogicLabeler.git
 cd LogicLabeler
 
 # 2. (可選) 設置環境變量，也可稍後在 GUI 中配置
@@ -292,11 +295,13 @@ docker compose logs -f
 
 服務啟動後：
 
-| 服務 | 地址 | 說明 |
-|------|------|------|
-| **前端界面** | http://localhost | React 應用 (Nginx 代理) |
-| **API 文檔** | http://localhost:8000/docs | Swagger UI 交互式文檔 |
-| **ChromaDB** | http://localhost:8100 | 向量數據庫 (內部使用) |
+
+| 服務           | 地址                                                       | 說明                  |
+| ------------ | -------------------------------------------------------- | ------------------- |
+| **前端界面**     | [http://localhost](http://localhost)                     | React 應用 (Nginx 代理) |
+| **API 文檔**   | [http://localhost:8000/docs](http://localhost:8000/docs) | Swagger UI 交互式文檔    |
+| **ChromaDB** | [http://localhost:8100](http://localhost:8100)           | 向量數據庫 (內部使用)        |
+
 
 > **首次使用**：前往「系統設定」頁面填入 DashScope API Key 即可開始使用 AI 功能。
 
@@ -343,13 +348,15 @@ npm run dev
 
 ### 環境變量
 
-| 變量 | 說明 | 默認值 |
-|------|------|--------|
-| `DASHSCOPE_API_KEY` | 阿里雲 DashScope API Key | — (可在 GUI 中設定) |
-| `DATABASE_URL` | SQLite 數據庫路徑 | `sqlite:///./data/logiclabeler.db` |
-| `CHROMADB_HOST` | ChromaDB 主機地址 | `chromadb` (Docker) / `localhost` |
-| `CHROMADB_PORT` | ChromaDB 端口 | `8100` |
-| `DATA_DIR` | 數據持久化根目錄 | `./data` |
+
+| 變量                  | 說明                    | 默認值                                |
+| ------------------- | --------------------- | ---------------------------------- |
+| `DASHSCOPE_API_KEY` | 阿里雲 DashScope API Key | — (可在 GUI 中設定)                     |
+| `DATABASE_URL`      | SQLite 數據庫路徑          | `sqlite:///./data/logiclabeler.db` |
+| `CHROMADB_HOST`     | ChromaDB 主機地址         | `chromadb` (Docker) / `localhost`  |
+| `CHROMADB_PORT`     | ChromaDB 端口           | `8100`                             |
+| `DATA_DIR`          | 數據持久化根目錄              | `./data`                           |
+
 
 ### GUI 運行時配置
 
@@ -442,87 +449,100 @@ LogicLabeler/
 
 ## API 參考
 
-啟動後端後訪問 http://localhost:8000/docs 查看完整的 Swagger UI 文檔。
+啟動後端後訪問 [http://localhost:8000/docs](http://localhost:8000/docs) 查看完整的 Swagger UI 文檔。
 
-<details>
-<summary><b>主要端點一覽</b> (點擊展開)</summary>
+**主要端點一覽** (點擊展開)
 
 ### 數據集管理
 
-| 方法 | 路徑 | 說明 |
-|------|------|------|
-| `POST` | `/api/datasets` | 創建數據集 |
-| `GET` | `/api/datasets` | 列出所有數據集 |
-| `GET` | `/api/datasets/{id}` | 獲取數據集詳情 |
-| `DELETE` | `/api/datasets/{id}` | 刪除數據集 |
-| `POST` | `/api/datasets/{id}/images` | 批量上傳圖片 (自動轉換 JPG) |
-| `GET` | `/api/datasets/{id}/images` | 分頁查詢圖片 (篩選/排序) |
-| `POST` | `/api/datasets/{id}/import` | 導入 YOLO / COCO / VOC 格式 ZIP |
-| `GET` | `/api/datasets/{id}/export` | 導出 YOLO 格式 ZIP |
-| `POST` | `/api/datasets/{id}/export` | 帶預處理/增強的導出 |
-| `GET` | `/api/datasets/{id}/stats` | 數據集統計信息 |
-| `POST` | `/api/datasets/{id}/auto-split` | 自動分割 Train/Val/Test |
+
+| 方法       | 路徑                              | 說明                          |
+| -------- | ------------------------------- | --------------------------- |
+| `POST`   | `/api/datasets`                 | 創建數據集                       |
+| `GET`    | `/api/datasets`                 | 列出所有數據集                     |
+| `GET`    | `/api/datasets/{id}`            | 獲取數據集詳情                     |
+| `DELETE` | `/api/datasets/{id}`            | 刪除數據集                       |
+| `POST`   | `/api/datasets/{id}/images`     | 批量上傳圖片 (自動轉換 JPG)           |
+| `GET`    | `/api/datasets/{id}/images`     | 分頁查詢圖片 (篩選/排序)              |
+| `POST`   | `/api/datasets/{id}/import`     | 導入 YOLO / COCO / VOC 格式 ZIP |
+| `GET`    | `/api/datasets/{id}/export`     | 導出 YOLO 格式 ZIP              |
+| `POST`   | `/api/datasets/{id}/export`     | 帶預處理/增強的導出                  |
+| `GET`    | `/api/datasets/{id}/stats`      | 數據集統計信息                     |
+| `POST`   | `/api/datasets/{id}/auto-split` | 自動分割 Train/Val/Test         |
+
 
 ### 標註管理
 
-| 方法 | 路徑 | 說明 |
-|------|------|------|
-| `GET` | `/api/images/{id}/annotations` | 查詢圖片標註 |
+
+| 方法    | 路徑                             | 說明               |
+| ----- | ------------------------------ | ---------------- |
+| `GET` | `/api/images/{id}/annotations` | 查詢圖片標註           |
 | `PUT` | `/api/images/{id}/annotations` | 更新標註 (觸發 RAG 記憶) |
+
 
 ### 自動標註
 
-| 方法 | 路徑 | 說明 |
-|------|------|------|
+
+| 方法     | 路徑                  | 說明        |
+| ------ | ------------------- | --------- |
 | `POST` | `/api/labeling/run` | 啟動自動標註流水線 |
+
 
 ### YOLO 訓練
 
-| 方法 | 路徑 | 說明 |
-|------|------|------|
-| `POST` | `/api/training/start` | 啟動訓練任務 |
-| `GET` | `/api/training/jobs` | 列出所有訓練任務 |
-| `POST` | `/api/training/jobs/{id}/stop` | 停止訓練 |
-| `POST` | `/api/training/jobs/{id}/resume` | 從 checkpoint 繼續訓練 |
-| `POST` | `/api/training/jobs/{id}/cancel` | 取消訓練 (強制終止) |
-| `DELETE` | `/api/training/jobs/{id}` | 刪除訓練任務 |
-| `GET` | `/api/training/jobs/{id}/metrics` | 獲取訓練指標 |
-| `GET` | `/api/training/jobs/{id}/log` | 獲取完整訓練日誌 |
-| `GET` | `/api/training/jobs/{id}/artifacts` | 列出訓練產出文件 |
-| `WS` | `/ws/logs/{job_id}` | WebSocket 實時日誌推送 |
+
+| 方法       | 路徑                                  | 說明                |
+| -------- | ----------------------------------- | ----------------- |
+| `POST`   | `/api/training/start`               | 啟動訓練任務            |
+| `GET`    | `/api/training/jobs`                | 列出所有訓練任務          |
+| `POST`   | `/api/training/jobs/{id}/stop`      | 停止訓練              |
+| `POST`   | `/api/training/jobs/{id}/resume`    | 從 checkpoint 繼續訓練 |
+| `POST`   | `/api/training/jobs/{id}/cancel`    | 取消訓練 (強制終止)       |
+| `DELETE` | `/api/training/jobs/{id}`           | 刪除訓練任務            |
+| `GET`    | `/api/training/jobs/{id}/metrics`   | 獲取訓練指標            |
+| `GET`    | `/api/training/jobs/{id}/log`       | 獲取完整訓練日誌          |
+| `GET`    | `/api/training/jobs/{id}/artifacts` | 列出訓練產出文件          |
+| `WS`     | `/ws/logs/{job_id}`                 | WebSocket 實時日誌推送  |
+
 
 ### 數據增強
 
-| 方法 | 路徑 | 說明 |
-|------|------|------|
+
+| 方法     | 路徑                      | 說明         |
+| ------ | ----------------------- | ---------- |
 | `POST` | `/api/augmentation/run` | 啟動 AI 數據增強 |
+
 
 ### 系統設定
 
-| 方法 | 路徑 | 說明 |
-|------|------|------|
-| `GET` | `/api/settings` | 獲取當前設定 |
-| `PUT` | `/api/settings` | 更新設定 (API Key / 模式等) |
-| `GET` | `/api/health` | 健康檢查 |
 
-</details>
+| 方法    | 路徑              | 說明                   |
+| ----- | --------------- | -------------------- |
+| `GET` | `/api/settings` | 獲取當前設定               |
+| `PUT` | `/api/settings` | 更新設定 (API Key / 模式等) |
+| `GET` | `/api/health`   | 健康檢查                 |
+
+
+
 
 ---
 
 ## 與競品比較
 
-| 維度 | Autodistill | GPT-4V 直接標註 | Roboflow | **LogicLabeler** |
-|------|:-----------:|:---------------:|:--------:|:----------------:|
-| 語義推理 | ❌ 僅名詞檢測 | ✅ 強 | ❌ | ✅ **CoT 邏輯推理** |
-| 定位精度 | 🔶 中 | ❌ 幻覺嚴重 | ✅ | ✅ **SAM + SAHI** |
-| 品質控制 | 🔶 固定閾值 | ❌ 無 | 🔶 規則 | ✅ **Agent 對抗辯論** |
-| 場景適應 | ❌ 需重訓 | 🔶 需微調 | ❌ | ✅ **RAG 即時優化** |
-| AI 增強 | ❌ | ❌ | 🔶 本地變換 | ✅ **AI 生成 + 本地** |
-| 本地預處理 | ❌ | ❌ | ✅ | ✅ |
-| 端到端訓練 | ❌ | ❌ | ✅ | ✅ **YOLO 訓練閉環** |
-| 訓練控制 | ❌ | ❌ | 🔶 | ✅ **停止/繼續/取消** |
-| AI 審查 | ❌ | ❌ | ❌ | ✅ **VLM 二次驗證** |
-| 自部署 | ✅ | ❌ 雲端 | ❌ 雲端 | ✅ **Docker 私有部署** |
+
+| 維度    | Autodistill | GPT-4V 直接標註 | Roboflow | **LogicLabeler**  |
+| ----- | ----------- | ----------- | -------- | ----------------- |
+| 語義推理  | ❌ 僅名詞檢測     | ✅ 強         | ❌        | ✅ **CoT 邏輯推理**    |
+| 定位精度  | 🔶 中        | ❌ 幻覺嚴重      | ✅        | ✅ **SAM + SAHI**  |
+| 品質控制  | 🔶 固定閾值     | ❌ 無         | 🔶 規則    | ✅ **Agent 對抗辯論**  |
+| 場景適應  | ❌ 需重訓       | 🔶 需微調      | ❌        | ✅ **RAG 即時優化**    |
+| AI 增強 | ❌           | ❌           | 🔶 本地變換  | ✅ **AI 生成 + 本地**  |
+| 本地預處理 | ❌           | ❌           | ✅        | ✅                 |
+| 端到端訓練 | ❌           | ❌           | ✅        | ✅ **YOLO 訓練閉環**   |
+| 訓練控制  | ❌           | ❌           | 🔶       | ✅ **停止/繼續/取消**    |
+| AI 審查 | ❌           | ❌           | ❌        | ✅ **VLM 二次驗證**    |
+| 自部署   | ✅           | ❌ 雲端        | ❌ 雲端     | ✅ **Docker 私有部署** |
+
 
 ---
 
@@ -534,8 +554,7 @@ Copyright (c) 2026 FONG, KUN FAI
 
 ---
 
-<div align="center">
+
 
 *Built with ❤️ using Qwen, React, FastAPI & ultralytics*
 
-</div>
