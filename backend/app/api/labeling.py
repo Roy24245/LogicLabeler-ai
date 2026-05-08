@@ -5,7 +5,9 @@ Chains Commander -> Soldier -> Critic -> RAG in a complete flow.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import re
 import threading
 from typing import Any
 
@@ -18,6 +20,7 @@ from app.database import SessionLocal, get_db
 from app.models import Annotation, Dataset, Image, LabelingJob, ReviewJob
 from app.services import commander, soldier, critic, rag_service, augmentation, reviewer
 from app.services import dataset_service as ds_svc
+from app.services import model_providers as mp
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +44,122 @@ class LabelingRequest(BaseModel):
 class ReviewRequest(BaseModel):
     dataset_id: int
     image_ids: list[int] | None = None
+
+
+class OptimizePromptRequest(BaseModel):
+    instruction: str
+
+
+OPTIMIZER_SYSTEM_PROMPT = """你是一個目標檢測標註提示詞 (prompt) 改寫專家。
+使用者會提供一段「標註指令」，你需要產出**恰好 3 個**經過優化的版本，每個版本從不同角度改進原指令：
+
+1. **更精確 (more_specific)**：補充明確的物體外觀、屬性、上下文細節，讓檢測模型能精準辨識目標。
+2. **加入邏輯 (with_logic)**：加入空間/邏輯條件 (例如「未戴」、「包含」、「靠近」、「位於…之上」)、排除條件、邊界情境，讓多智能體 (Commander) 能拆解出邏輯規則。
+3. **更簡潔 (more_concise)**：保留核心目標但去除冗餘文字，盡量簡短無歧義，適合快速指令。
+
+要求：
+- 三個版本都必須保留原指令的核心目標。
+- 三個版本內容必須**明顯不同**，不要互相重複。
+- 使用與原指令相同的語言（使用者用中文則用中文，使用英文則用英文）。
+- 每個版本長度不超過 300 字。
+- 不要加入額外解釋或前綴。
+
+嚴格以下列 JSON 格式輸出（不要 markdown 程式碼區塊以外的任何文字）：
+```json
+{
+  "suggestions": [
+    {"label": "more_specific", "text": "..."},
+    {"label": "with_logic", "text": "..."},
+    {"label": "more_concise", "text": "..."}
+  ]
+}
+```"""
+
+LABEL_TO_TITLE = {
+    "more_specific": "更精確",
+    "with_logic": "加入邏輯",
+    "more_concise": "更簡潔",
+}
+
+
+def _extract_json_block(text: str) -> str:
+    if "```json" in text:
+        text = text.split("```json", 1)[1]
+        if "```" in text:
+            text = text.split("```", 1)[0]
+    elif "```" in text:
+        parts = text.split("```")
+        if len(parts) >= 2:
+            text = parts[1]
+    return text.strip()
+
+
+def _parse_optimizer_output(text: str, instruction: str) -> list[dict[str, str]]:
+    """Parse LLM output into a list of {label, title, text} suggestions (length 3)."""
+    raw = _extract_json_block(text)
+    suggestions: list[dict[str, str]] = []
+    try:
+        data = json.loads(raw)
+        items = data.get("suggestions") if isinstance(data, dict) else None
+        if isinstance(items, list):
+            for it in items:
+                if isinstance(it, dict) and it.get("text"):
+                    label = it.get("label") or ""
+                    suggestions.append({
+                        "label": label,
+                        "title": LABEL_TO_TITLE.get(label, label or "建議"),
+                        "text": str(it["text"]).strip(),
+                    })
+                elif isinstance(it, str):
+                    suggestions.append({"label": "", "title": "建議", "text": it.strip()})
+    except json.JSONDecodeError:
+        # Fallback: split by numbered list / bullet markers.
+        chunks = re.split(r"\n\s*(?:\d+[\.\)]|[-*])\s+", text.strip())
+        chunks = [c.strip() for c in chunks if c.strip()]
+        for c in chunks[:3]:
+            suggestions.append({"label": "", "title": "建議", "text": c})
+
+    seen = set()
+    deduped: list[dict[str, str]] = []
+    for s in suggestions:
+        if s["text"] and s["text"] not in seen:
+            deduped.append(s)
+            seen.add(s["text"])
+
+    while len(deduped) < 3:
+        idx = len(deduped)
+        fallback_titles = ["更精確", "加入邏輯", "更簡潔"]
+        fallback_labels = ["more_specific", "with_logic", "more_concise"]
+        deduped.append({
+            "label": fallback_labels[idx],
+            "title": fallback_titles[idx],
+            "text": instruction.strip(),
+        })
+
+    return deduped[:3]
+
+
+@router.post("/labeling/optimize-prompt")
+def optimize_prompt(body: OptimizePromptRequest):
+    instruction = (body.instruction or "").strip()
+    if not instruction:
+        raise HTTPException(400, "instruction is empty")
+
+    try:
+        text = mp.text_complete(
+            messages=[
+                {"role": "system", "content": OPTIMIZER_SYSTEM_PROMPT},
+                {"role": "user", "content": instruction},
+            ],
+            temperature=0.7,
+            max_tokens=1200,
+        )
+    except Exception as e:
+        logger.exception("Prompt optimizer call failed: %s", e)
+        raise HTTPException(502, f"模型呼叫失敗: {e}")
+
+    suggestions = _parse_optimizer_output(text, instruction)
+    return {"suggestions": suggestions}
 
 
 @router.post("/labeling/run")

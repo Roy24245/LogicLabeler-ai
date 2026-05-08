@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   Box, Button, Card, CardContent, FormControl, Grid, InputLabel, LinearProgress,
   MenuItem, Select, Switch, FormControlLabel, TextField, Typography, Chip,
-  Divider, useTheme, alpha, Avatar,
+  Divider, useTheme, alpha,
 } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import AutoFixHighRoundedIcon from '@mui/icons-material/AutoFixHighRounded'
@@ -12,12 +12,16 @@ import CancelRoundedIcon from '@mui/icons-material/CancelRounded'
 import WarningRoundedIcon from '@mui/icons-material/WarningRounded'
 import BuildRoundedIcon from '@mui/icons-material/BuildRounded'
 import ImageRoundedIcon from '@mui/icons-material/ImageRounded'
+import TipsAndUpdatesRoundedIcon from '@mui/icons-material/TipsAndUpdatesRounded'
 import {
   getDatasets, runLabeling, getLabelingStatus,
   runReview, getReviewStatus, applyReviewFixes,
   type Dataset, type CurrentImagePreview,
 } from '../api/client'
 import { useStore } from '../store/useStore'
+import PromptOptimizerDialog from '../components/PromptOptimizerDialog'
+import PageHeader from '../components/PageHeader'
+import LogConsole from '../components/LogConsole'
 
 const BBOX_COLORS = ['#6750A4', '#0061A4', '#7D5260', '#1B8755', '#E8A317', '#B3261E', '#625B71', '#00677E', '#984061', '#006D2F']
 
@@ -42,7 +46,6 @@ export default function AutoLabel() {
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState({ total: 0, processed: 0, status: '' })
   const [logs, setLogs] = useState<string[]>([])
-  const logRef = useRef<HTMLDivElement>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [reviewDs, setReviewDs] = useState<number>(0)
@@ -51,7 +54,6 @@ export default function AutoLabel() {
   const [reviewLogs, setReviewLogs] = useState<string[]>([])
   const [reviewSummary, setReviewSummary] = useState<{ approved: number; rejected: number; needs_adjustment: number } | null>(null)
   const [reviewJobId, setReviewJobId] = useState<number | null>(null)
-  const reviewLogRef = useRef<HTMLDivElement>(null)
   const reviewPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [previewImage, setPreviewImage] = useState<CurrentImagePreview | null>(null)
@@ -60,9 +62,17 @@ export default function AutoLabel() {
   const imgRef = useRef<HTMLImageElement | null>(null)
   const [imgLoaded, setImgLoaded] = useState(false)
 
+  const [optimizeOpen, setOptimizeOpen] = useState(false)
+  const [optimizeBaseline, setOptimizeBaseline] = useState('')
+
+  const handleOpenOptimize = () => {
+    const trimmed = instruction.trim()
+    if (!trimmed) { showSnackbar('請先輸入標註指令', 'error'); return }
+    setOptimizeBaseline(trimmed)
+    setOptimizeOpen(true)
+  }
+
   useEffect(() => { (async () => { try { const [ds] = await Promise.all([getDatasets()]); setDatasets(ds.data) } catch {} })() }, [])
-  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [logs])
-  useEffect(() => { if (reviewLogRef.current) reviewLogRef.current.scrollTop = reviewLogRef.current.scrollHeight }, [reviewLogs])
 
   const classColors = useMemo(() => {
     if (!previewImage) return {}
@@ -214,39 +224,15 @@ export default function AutoLabel() {
   const reviewPct = reviewProgress.total > 0 ? (reviewProgress.processed / reviewProgress.total) * 100 : 0
   const isActive = running || reviewing
 
-  const logStyle = {
-    p: 2, overflow: 'auto',
-    bgcolor: theme.palette.mode === 'dark' ? '#0E0D11' : '#F5F3F7',
-    fontFamily: '"JetBrains Mono", "Fira Code", monospace', fontSize: 12, lineHeight: 1.7,
-    borderRadius: 3,
-    border: `1px solid ${theme.palette.divider}`,
-    '&::-webkit-scrollbar': { width: 5 },
-    '&::-webkit-scrollbar-thumb': { bgcolor: alpha(theme.palette.primary.main, 0.3), borderRadius: 3 },
-  }
-
-  const logColor = (line: string) => {
-    if (line.includes('[ERROR]')) return theme.palette.error.main
-    if (line.includes('[Commander]')) return theme.palette.primary.main
-    if (line.includes('[Soldier]')) return theme.palette.info.main
-    if (line.includes('[Critic]')) return theme.palette.success.main
-    if (line.includes('[RAG]')) return theme.palette.warning.main
-    if (line.includes('✓')) return theme.palette.success.main
-    if (line.includes('✗')) return theme.palette.error.main
-    if (line.includes('⚠')) return theme.palette.warning.main
-    if (line.includes('[Review]')) return theme.palette.secondary.main
-    return theme.palette.text.secondary
-  }
-
   const totalAnns = previewImage?.annotations.length ?? 0
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main', width: 44, height: 44 }}>
-          <AutoFixHighRoundedIcon />
-        </Avatar>
-        <Typography variant="h4">自動標註</Typography>
-      </Box>
+      <PageHeader
+        icon={<AutoFixHighRoundedIcon />}
+        title="自動標註"
+        subtitle="多智能體協作 + RAG 檢索強化的智能標註與審查流程"
+      />
 
       <Grid container spacing={2}>
         {/* ── Left: Config ── */}
@@ -261,7 +247,21 @@ export default function AutoLabel() {
                   {datasets.map((d) => <MenuItem key={d.id} value={d.id}>{d.name} ({d.image_count} 張)</MenuItem>)}
                 </Select>
               </FormControl>
-              <TextField label="標註指令" fullWidth multiline rows={3} placeholder="例：標註所有未戴安全帽的工人" value={instruction} onChange={(e) => setInstruction(e.target.value)} />
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="subtitle2" color="text.secondary">標註指令</Typography>
+                  <Button
+                    size="small"
+                    variant="tonal"
+                    startIcon={<TipsAndUpdatesRoundedIcon />}
+                    onClick={handleOpenOptimize}
+                    disabled={!instruction.trim()}
+                  >
+                    優化 Prompt
+                  </Button>
+                </Box>
+                <TextField fullWidth multiline rows={3} placeholder="例：標註所有未戴安全帽的工人" value={instruction} onChange={(e) => setInstruction(e.target.value)} />
+              </Box>
               <FormControl fullWidth>
                 <InputLabel>Soldier 模式</InputLabel>
                 <Select label="Soldier 模式" value={soldierMode} onChange={(e) => setSoldierMode(e.target.value)}>
@@ -273,7 +273,7 @@ export default function AutoLabel() {
                 <FormControlLabel control={<Switch checked={useSahi} onChange={(e) => setUseSahi(e.target.checked)} />} label="SAHI 切片推理" />
                 <FormControlLabel control={<Switch checked={useRag} onChange={(e) => setUseRag(e.target.checked)} />} label="RAG 檢索增強" />
               </Box>
-              <Button variant="contained" size="large" fullWidth startIcon={<PlayArrowRoundedIcon />} onClick={handleRun} disabled={running} sx={{ borderRadius: 3 }}>
+              <Button variant="contained" size="large" fullWidth startIcon={<PlayArrowRoundedIcon />} onClick={handleRun} disabled={running}>
                 {running ? '標註進行中...' : '開始自動標註'}
               </Button>
             </CardContent>
@@ -293,7 +293,7 @@ export default function AutoLabel() {
                   {datasets.filter(d => d.annotation_count > 0).map((d) => <MenuItem key={d.id} value={d.id}>{d.name} ({d.annotation_count} 標註)</MenuItem>)}
                 </Select>
               </FormControl>
-              <Button variant="outlined" size="large" fullWidth startIcon={<RateReviewRoundedIcon />} onClick={handleReview} disabled={reviewing || !reviewDs} sx={{ borderRadius: 3 }}>
+              <Button variant="outlined" size="large" fullWidth startIcon={<RateReviewRoundedIcon />} onClick={handleReview} disabled={reviewing || !reviewDs}>
                 {reviewing ? '審查進行中...' : '開始 AI 審查'}
               </Button>
               {reviewSummary && (
@@ -304,7 +304,7 @@ export default function AutoLabel() {
                 </Box>
               )}
               {reviewSummary && (reviewSummary.rejected > 0 || reviewSummary.needs_adjustment > 0) && (
-                <Button variant="contained" color="warning" startIcon={<BuildRoundedIcon />} onClick={handleApply} fullWidth sx={{ borderRadius: 3 }}>
+                <Button variant="contained" color="warning" startIcon={<BuildRoundedIcon />} onClick={handleApply} fullWidth>
                   一鍵套用修正
                 </Button>
               )}
@@ -425,22 +425,24 @@ export default function AutoLabel() {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>實時日誌</Typography>
-              <Box ref={logRef} sx={{ ...logStyle, height: reviewLogs.length > 0 ? 160 : 200 }}>
-                {logs.map((line, i) => <Box key={i} sx={{ color: logColor(line), whiteSpace: 'pre-wrap' }}>{line}</Box>)}
-                {logs.length === 0 && <Typography variant="body2" color="text.secondary">等待執行...</Typography>}
-              </Box>
+              <LogConsole lines={logs} height={reviewLogs.length > 0 ? 160 : 200} emptyText="等待執行..." />
               {reviewLogs.length > 0 && (
                 <>
                   <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>審查日誌</Typography>
-                  <Box ref={reviewLogRef} sx={{ ...logStyle, height: 160 }}>
-                    {reviewLogs.map((line, i) => <Box key={i} sx={{ color: logColor(line), whiteSpace: 'pre-wrap' }}>{line}</Box>)}
-                  </Box>
+                  <LogConsole lines={reviewLogs} height={160} />
                 </>
               )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+
+      <PromptOptimizerDialog
+        open={optimizeOpen}
+        baseline={optimizeBaseline}
+        onClose={() => setOptimizeOpen(false)}
+        onApply={(text) => { setInstruction(text); setOptimizeOpen(false) }}
+      />
     </Box>
   )
 }

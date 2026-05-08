@@ -10,10 +10,7 @@ import json
 import logging
 from typing import Any
 
-import dashscope
-from dashscope import Generation
-
-from app.config import settings
+from app.services import model_providers as mp
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +57,6 @@ SYSTEM_PROMPT = """你是 LogicLabeler 系統的 Commander (指揮官) 智能體
 
 def parse_instruction(instruction: str, rag_context: str = "") -> dict[str, Any]:
     """Parse a natural-language labeling instruction into an execution plan."""
-    dashscope.api_key = settings.dashscope_api_key
-
     user_msg = instruction
     if rag_context:
         user_msg += (
@@ -69,21 +64,13 @@ def parse_instruction(instruction: str, rag_context: str = "") -> dict[str, Any]
         )
 
     try:
-        response = Generation.call(
-            model="qwen-plus",
+        text = mp.text_complete(
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_msg},
             ],
-            result_format="message",
             temperature=0.2,
         )
-
-        if response.status_code != 200:
-            logger.error("DashScope error: %s", response)
-            return _fallback_plan(instruction)
-
-        text = response.output.choices[0].message.content
         text = _extract_json(text)
         plan = json.loads(text)
         _validate_plan(plan)

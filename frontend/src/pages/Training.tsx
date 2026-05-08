@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import {
   Box, Button, Card, CardContent, Chip, FormControl, Grid, InputLabel,
-  LinearProgress, MenuItem, Select, TextField, Typography, Paper,
+  LinearProgress, MenuItem, Select, TextField, Typography,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   IconButton, Dialog, DialogTitle, DialogContent, Tabs, Tab, Tooltip,
-  useTheme, alpha, Avatar, Divider,
+  useTheme, alpha, Divider,
 } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import StopRoundedIcon from '@mui/icons-material/StopRounded'
@@ -27,6 +27,8 @@ import {
 } from '../api/client'
 import { useStore } from '../store/useStore'
 import PreprocessDialog from '../components/PreprocessDialog'
+import PageHeader from '../components/PageHeader'
+import LogConsole from '../components/LogConsole'
 
 const MODEL_OPTIONS = ['yolov8n', 'yolov8s', 'yolov8m', 'yolov8l', 'yolov8x', 'yolo11n', 'yolo11s', 'yolo11m']
 
@@ -149,12 +151,11 @@ export default function Training() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main', width: 44, height: 44 }}>
-          <ModelTrainingRoundedIcon />
-        </Avatar>
-        <Typography variant="h4">YOLO 模型訓練</Typography>
-      </Box>
+      <PageHeader
+        icon={<ModelTrainingRoundedIcon />}
+        title="YOLO 模型訓練"
+        subtitle="使用 ultralytics 在本地訓練 YOLOv8 / v11 模型，並即時觀察日誌與訓練曲線"
+      />
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
@@ -177,7 +178,7 @@ export default function Training() {
               <TextField label="Epochs" type="number" value={form.epochs} onChange={(e) => setForm({ ...form, epochs: +e.target.value })} />
               <TextField label="Batch Size" type="number" value={form.batch_size} onChange={(e) => setForm({ ...form, batch_size: +e.target.value })} />
               <TextField label="Image Size" type="number" value={form.img_size} onChange={(e) => setForm({ ...form, img_size: +e.target.value })} />
-              <Button variant="contained" size="large" startIcon={<PlayArrowRoundedIcon />} onClick={handleStartClick} sx={{ borderRadius: 3 }}>
+              <Button variant="contained" size="large" startIcon={<PlayArrowRoundedIcon />} onClick={handleStartClick}>
                 開始訓練
               </Button>
             </CardContent>
@@ -271,30 +272,30 @@ export default function Training() {
           <Box sx={{ px: 3, pb: 1, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
             {canResume && (
               <Button variant="contained" color="success" size="small" startIcon={<PlayArrowRoundedIcon />}
-                onClick={() => handleResume(selectedJob.id)} sx={{ borderRadius: 3 }}>
+                onClick={() => handleResume(selectedJob.id)}>
                 繼續訓練
               </Button>
             )}
             {canStop && (
-              <Button variant="outlined" color="warning" size="small" startIcon={<PauseRoundedIcon />}
-                onClick={() => handleStop(selectedJob.id)} sx={{ borderRadius: 3 }}>
+              <Button variant="tonal" color="warning" size="small" startIcon={<PauseRoundedIcon />}
+                onClick={() => handleStop(selectedJob.id)}>
                 停止
               </Button>
             )}
             {canCancel && (
               <Button variant="outlined" color="error" size="small" startIcon={<CancelRoundedIcon />}
-                onClick={() => handleCancel(selectedJob.id)} sx={{ borderRadius: 3 }}>
+                onClick={() => handleCancel(selectedJob.id)}>
                 取消
               </Button>
             )}
             {!isRunning && (
               <Button variant="text" color="inherit" size="small" startIcon={<DeleteRoundedIcon />}
-                onClick={() => handleDelete(selectedJob.id)} sx={{ borderRadius: 3, color: 'text.secondary' }}>
+                onClick={() => handleDelete(selectedJob.id)} sx={{ color: 'text.secondary' }}>
                 刪除
               </Button>
             )}
             <Box sx={{ flex: 1 }} />
-            {isRunning && <LinearProgress sx={{ width: 120, borderRadius: 1 }} />}
+            {isRunning && <LinearProgress sx={{ width: 120 }} />}
           </Box>
         )}
 
@@ -306,13 +307,9 @@ export default function Training() {
           </Tabs>
 
           {tab === 0 && (
-            <Paper ref={logRef} variant="outlined" sx={{
-              p: 2, height: 440, overflow: 'auto',
-              bgcolor: theme.palette.mode === 'dark' ? '#0E0D11' : '#F5F3F7',
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 12, lineHeight: 1.7, borderRadius: 3,
-            }}>
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', color: theme.palette.text.secondary }}>{logText || '等待日誌輸出...'}</pre>
-            </Paper>
+            <Box ref={logRef}>
+              <LogConsole text={logText} height={440} emptyText="等待日誌輸出..." />
+            </Box>
           )}
 
           {tab === 1 && (

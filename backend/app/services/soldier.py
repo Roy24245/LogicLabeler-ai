@@ -2,21 +2,18 @@
 
 Supports two modes:
   A) Local Grounded-SAM  (groundingdino + SAM)
-  B) Qwen3.5-Plus Vision API via DashScope
+  B) Vision API (Qwen-VL via DashScope, OpenAI GPT-4o, Anthropic Claude, ...)
+     — actual model is determined by the active vision provider.
 """
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import re
-from pathlib import Path
 from typing import Any
 
-import dashscope
-from dashscope import MultiModalConversation
-
 from app.config import settings
+from app.services import model_providers as mp
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +42,7 @@ def _detect_qwen_vision(
     targets: list[str],
     detection_prompts: dict[str, str],
 ) -> list[dict[str, Any]]:
-    dashscope.api_key = settings.dashscope_api_key
-
+    """Run vision detection via the configured vision provider."""
     prompt_text = (
         "你是一個精確的目標檢測助手。請在這張圖片中找出以下所有目標物體，"
         "並為每個檢測到的物體返回邊界框。\n\n"
@@ -62,32 +58,23 @@ def _detect_qwen_vision(
     )
 
     try:
-        image_uri = f"file://{Path(image_path).resolve()}"
-        response = MultiModalConversation.call(
-            model="qwen-vl-plus",
+        data_url = mp.encode_image_to_data_url(image_path)
+        text = mp.vision_complete(
             messages=[
                 {
                     "role": "user",
                     "content": [
-                        {"image": image_uri},
-                        {"text": prompt_text},
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                        {"type": "text", "text": prompt_text},
                     ],
                 }
             ],
             temperature=0.1,
         )
-
-        if response.status_code != 200:
-            logger.error("Qwen VL error: %s", response)
-            return []
-
-        text = response.output.choices[0].message.content
-        if isinstance(text, list):
-            text = text[0].get("text", "")
         return _parse_detections(text, image_path)
 
     except Exception as e:
-        logger.exception("Soldier (Qwen Vision) failed: %s", e)
+        logger.exception("Soldier (Vision) failed: %s", e)
         return []
 
 

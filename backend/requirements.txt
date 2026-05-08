@@ -6,6 +6,8 @@ python-multipart
 pydantic
 pydantic-settings
 dashscope
+openai
+anthropic
 chromadb
 Pillow
 numpy

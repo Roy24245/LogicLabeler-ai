@@ -17,6 +17,9 @@ interface AppState {
   themeMode: ThemeMode
   setThemeMode: (mode: ThemeMode) => void
 
+  onboardingCompleted: boolean
+  setOnboardingCompleted: (v: boolean) => void
+
   snackbar: { open: boolean; message: string; severity: 'success' | 'error' | 'info' }
   showSnackbar: (message: string, severity?: 'success' | 'error' | 'info') => void
   closeSnackbar: () => void
@@ -37,6 +40,9 @@ export const useStore = create<AppState>()(
       themeMode: 'system',
       setThemeMode: (themeMode) => set({ themeMode }),
 
+      onboardingCompleted: false,
+      setOnboardingCompleted: (onboardingCompleted) => set({ onboardingCompleted }),
+
       snackbar: { open: false, message: '', severity: 'info' },
       showSnackbar: (message, severity = 'info') =>
         set({ snackbar: { open: true, message, severity } }),
@@ -45,7 +51,11 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'logiclabeler-store',
-      partialize: (state) => ({ themeMode: state.themeMode, sidebarOpen: state.sidebarOpen }),
+      partialize: (state) => ({
+        themeMode: state.themeMode,
+        sidebarOpen: state.sidebarOpen,
+        onboardingCompleted: state.onboardingCompleted,
+      }),
     },
   ),
 )

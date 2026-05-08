@@ -8,15 +8,12 @@ from __future__ import annotations
 import json
 import logging
 from io import BytesIO
-from pathlib import Path
 from typing import Any
 
-import dashscope
-from dashscope import MultiModalConversation
 from PIL import Image as PILImage
 
-from app.config import settings
 from app.core.geometry import iou, contains, is_wearing, is_holding, is_near, is_above
+from app.services import model_providers as mp
 
 logger = logging.getLogger(__name__)
 
@@ -122,9 +119,7 @@ def _vlm_verification(
     all_detections: list[dict[str, Any]],
     to_verify: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Use Qwen VL to verify low-confidence detections by cropping regions."""
-    dashscope.api_key = settings.dashscope_api_key
-
+    """Use the active vision provider to verify low-confidence detections by cropping regions."""
     try:
         pil_img = PILImage.open(image_path)
     except Exception:
@@ -161,31 +156,25 @@ def _vlm_verification(
         )
 
         try:
-            response = MultiModalConversation.call(
-                model="qwen-vl-plus",
+            text = mp.vision_complete(
                 messages=[
                     {
                         "role": "user",
                         "content": [
-                            {"image": data_uri},
-                            {"text": prompt},
+                            {"type": "image_url", "image_url": {"url": data_uri}},
+                            {"type": "text", "text": prompt},
                         ],
                     }
                 ],
                 temperature=0.1,
             )
-
-            if response.status_code == 200:
-                text = response.output.choices[0].message.content
-                if isinstance(text, list):
-                    text = text[0].get("text", "")
-                result = _parse_verification(text)
-                if result.get("is_present", True):
-                    verified.add(id(det))
-                    det["confidence"] = max(det.get("confidence", 0), result.get("confidence", 0.6))
-                    det["source"] = "critic_verified"
-                else:
-                    rejected.add(id(det))
+            result = _parse_verification(text)
+            if result.get("is_present", True):
+                verified.add(id(det))
+                det["confidence"] = max(det.get("confidence", 0), result.get("confidence", 0.6))
+                det["source"] = "critic_verified"
+            else:
+                rejected.add(id(det))
         except Exception as e:
             logger.warning("VLM verification failed for detection: %s", e)
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Box, Button, Card, CardContent, CardActions, Chip, Dialog, DialogTitle,
   DialogContent, DialogActions, Grid, IconButton, TextField, Typography,
-  MenuItem, Select, InputLabel, FormControl, Fab, useTheme, alpha, Avatar,
+  MenuItem, Select, InputLabel, FormControl, useTheme, alpha, Avatar,
 } from '@mui/material'
 import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded'
@@ -13,6 +13,7 @@ import ImageRoundedIcon from '@mui/icons-material/ImageRounded'
 import LabelRoundedIcon from '@mui/icons-material/LabelRounded'
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded'
 import FolderRoundedIcon from '@mui/icons-material/FolderRounded'
+import StorageRoundedIcon from '@mui/icons-material/StorageRounded'
 import { useDropzone } from 'react-dropzone'
 import {
   getDatasets, createDataset, deleteDataset, importDataset, exportDataset,
@@ -20,6 +21,7 @@ import {
 } from '../api/client'
 import { useStore } from '../store/useStore'
 import PreprocessDialog from '../components/PreprocessDialog'
+import PageHeader from '../components/PageHeader'
 
 export default function Datasets() {
   const navigate = useNavigate()
@@ -120,18 +122,16 @@ export default function Datasets() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">數據集管理</Typography>
-        <Fab
-          variant="extended"
-          color="primary"
-          onClick={() => setCreateOpen(true)}
-          sx={{ boxShadow: '0 2px 8px rgba(103,80,164,0.25)' }}
-        >
-          <AddRoundedIcon sx={{ mr: 1 }} />
-          新建數據集
-        </Fab>
-      </Box>
+      <PageHeader
+        icon={<StorageRoundedIcon />}
+        title="數據集管理"
+        subtitle="建立、匯入、匯出與管理您的數據集"
+        actions={
+          <Button variant="contained" size="large" startIcon={<AddRoundedIcon />} onClick={() => setCreateOpen(true)}>
+            新建數據集
+          </Button>
+        }
+      />
 
       <Grid container spacing={2}>
         {datasets.map((ds) => (
@@ -139,7 +139,6 @@ export default function Datasets() {
             <Card
               sx={{
                 cursor: 'pointer',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
                   borderColor: 'primary.main',
                   transform: 'translateY(-2px)',
@@ -150,7 +149,7 @@ export default function Datasets() {
             >
               <CardContent sx={{ pb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                  <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main', width: 40, height: 40 }}>
+                  <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.14), color: 'primary.main', width: 40, height: 40, borderRadius: 2.5 }}>
                     <FolderRoundedIcon />
                   </Avatar>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -188,14 +187,18 @@ export default function Datasets() {
         ))}
         {datasets.length === 0 && (
           <Grid item xs={12}>
-            <Box sx={{ textAlign: 'center', py: 10 }}>
-              <Avatar sx={{ width: 72, height: 72, mx: 'auto', mb: 2, bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main' }}>
+            <Card sx={{ textAlign: 'center', py: 8, px: 3, borderStyle: 'dashed' }}>
+              <Avatar variant="rounded" sx={{ width: 72, height: 72, mx: 'auto', mb: 2, bgcolor: alpha(theme.palette.primary.main, 0.14), color: 'primary.main', borderRadius: 4 }}>
                 <FolderRoundedIcon sx={{ fontSize: 36 }} />
               </Avatar>
-              <Typography color="text.secondary">
-                尚未創建任何數據集，點擊右上方按鈕開始
+              <Typography variant="h6" sx={{ mb: 0.5 }}>尚未建立任何數據集</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+                點擊右上方「新建數據集」開始您的第一個專案
               </Typography>
-            </Box>
+              <Button variant="tonal" startIcon={<AddRoundedIcon />} onClick={() => setCreateOpen(true)}>
+                立即建立
+              </Button>
+            </Card>
           </Grid>
         )}
       </Grid>

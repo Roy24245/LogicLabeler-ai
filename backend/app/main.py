@@ -34,6 +34,7 @@ def _load_settings_from_db():
     from app.database import SessionLocal
     from app.models import SystemSetting
     from app.config import settings as cfg
+    from app.services import model_providers as mp
 
     db = SessionLocal()
     try:
@@ -49,6 +50,8 @@ def _load_settings_from_db():
                 cfg.augmentation_enabled = bool(val)
     finally:
         db.close()
+
+    mp.reload_active_models()
 
 
 app = FastAPI(

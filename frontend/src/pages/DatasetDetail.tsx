@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Autocomplete, Box, Button, Card, CardMedia, Checkbox, Chip, Dialog, DialogTitle,
+  Autocomplete, Avatar, Box, Button, Card, CardMedia, Checkbox, Chip, Dialog, DialogTitle,
   DialogContent, Divider, Grid, IconButton, MenuItem, Pagination, Select, Slider,
   Tab, Tabs, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography,
-  CircularProgress, Menu, useTheme, alpha, Avatar,
+  CircularProgress, Menu, useTheme, alpha,
 } from '@mui/material'
 import AddPhotoAlternateRoundedIcon from '@mui/icons-material/AddPhotoAlternateRounded'
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded'
@@ -28,15 +28,20 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
 import SelectAllRoundedIcon from '@mui/icons-material/SelectAllRounded'
 import FitScreenRoundedIcon from '@mui/icons-material/FitScreenRounded'
 import FolderRoundedIcon from '@mui/icons-material/FolderRounded'
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded'
+import DeleteForeverRoundedIcon from '@mui/icons-material/DeleteForeverRounded'
 import { useDropzone } from 'react-dropzone'
 import {
   getDataset, getImages, getAnnotations, uploadImages, deleteImage, updateAnnotations,
   batchDeleteImages, getDatasetStats, autoSplit, batchSplit, convertImagesToJpg,
+  deleteDataset, exportDataset,
   type Dataset, type ImageItem, type DatasetStats as StatsType,
 } from '../api/client'
 import { useStore } from '../store/useStore'
 import ClassManager from '../components/ClassManager'
 import DatasetStatsPanel from '../components/DatasetStats'
+import PreprocessDialog from '../components/PreprocessDialog'
+import PageHeader from '../components/PageHeader'
 
 const COLORS = ['#6750A4', '#0061A4', '#7D5260', '#1B8755', '#E8A317', '#B3261E', '#625B71', '#00677E', '#984061', '#006D2F']
 const HANDLE_SIZE = 7
@@ -65,8 +70,14 @@ const SPLIT_CHIP: Record<string, { label: string; color: 'info' | 'warning' | 'e
 export default function DatasetDetail() {
   const { id } = useParams<{ id: string }>()
   const datasetId = Number(id)
+  const navigate = useNavigate()
   const { showSnackbar } = useStore()
   const theme = useTheme()
+
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deletingDataset, setDeletingDataset] = useState(false)
 
   const [tab, setTab] = useState(0)
   const [dataset, setDataset] = useState<Dataset | null>(null)
@@ -171,6 +182,42 @@ export default function DatasetDetail() {
   const handleAutoSplit = async () => {
     try { await autoSplit(datasetId, splitRatios[0] / 100, splitRatios[1] / 100, splitRatios[2] / 100); showSnackbar('自動分割完成', 'success'); refreshAll() }
     catch { showSnackbar('分割失敗', 'error') }
+  }
+
+  const handleSaveDataset = () => setExportDialogOpen(true)
+
+  const handleExportWithPreprocess = async (config: { augmentations: string[]; preprocessing: Record<string, any> }) => {
+    setExportDialogOpen(false)
+    setExporting(true)
+    try {
+      const { data } = await exportDataset(
+        datasetId,
+        config.augmentations.length > 0 ? config.augmentations : undefined,
+        Object.keys(config.preprocessing).length > 0 ? config.preprocessing : undefined,
+      )
+      const url = window.URL.createObjectURL(new Blob([data]))
+      const a = document.createElement('a')
+      a.href = url
+      const safeName = (dataset?.name || `dataset_${datasetId}`).replace(/[^\w\-]+/g, '_')
+      a.download = `${safeName}_yolo.zip`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      showSnackbar('數據集已保存到本地', 'success')
+    } catch { showSnackbar('保存失敗', 'error') }
+    finally { setExporting(false) }
+  }
+
+  const handleDeleteDataset = async () => {
+    setDeletingDataset(true)
+    try {
+      await deleteDataset(datasetId)
+      showSnackbar('數據集已刪除', 'success')
+      navigate('/datasets')
+    } catch {
+      showSnackbar('刪除失敗', 'error')
+      setDeletingDataset(false)
+      setDeleteConfirmOpen(false)
+    }
   }
 
   // Annotator
@@ -336,32 +383,39 @@ export default function DatasetDetail() {
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main', width: 48, height: 48 }}>
-            <FolderRoundedIcon />
-          </Avatar>
-          <Box>
-            <Typography variant="h4">{dataset?.name || '數據集'}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {dataset?.image_count} 張圖片 · {dataset?.annotation_count} 個標註 · {dataset?.labeled_image_count}/{dataset?.image_count} 已標註
-            </Typography>
-          </Box>
-        </Box>
-        <Button variant="contained" component="label" startIcon={<AddPhotoAlternateRoundedIcon />} sx={{ borderRadius: 3 }}>
-          上傳圖片
-          <input type="file" hidden multiple accept="image/*" onChange={handleUpload} />
-        </Button>
-      </Box>
+      <PageHeader
+        icon={<FolderRoundedIcon />}
+        title={dataset?.name || '數據集'}
+        subtitle={dataset ? `${dataset.image_count} 張圖片 · ${dataset.annotation_count} 個標註 · ${dataset.labeled_image_count}/${dataset.image_count} 已標註` : ''}
+        actions={
+          <>
+            <Button variant="contained" component="label" startIcon={<AddPhotoAlternateRoundedIcon />}>
+              上傳圖片
+              <input type="file" hidden multiple accept="image/*" onChange={handleUpload} />
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadRoundedIcon />}
+              onClick={handleSaveDataset}
+              disabled={exporting}
+            >
+              {exporting ? '保存中...' : '保存數據集'}
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteForeverRoundedIcon />}
+              onClick={() => setDeleteConfirmOpen(true)}
+            >
+              刪除數據集
+            </Button>
+          </>
+        }
+      />
 
       <Tabs
         value={tab} onChange={(_, v) => setTab(v)}
-        sx={{
-          mb: 2,
-          '& .MuiTab-root': { borderRadius: 3, mx: 0.5, minHeight: 40 },
-          '& .Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) },
-        }}
+        sx={{ mb: 2, '& .Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) } }}
       >
         <Tab label="圖片" />
         <Tab label="統計" />
@@ -561,7 +615,7 @@ export default function DatasetDetail() {
             </Box>}
             <Box sx={{ flex: 1 }} />
             <Typography variant="caption" color="text.secondary">{annotations.length} 標註 · {Math.round(zoom * 100)}%</Typography>
-            <Button size="small" variant="contained" startIcon={<SaveRoundedIcon />} onClick={handleSave} disabled={!dirty} sx={{ borderRadius: 3 }}>
+            <Button size="small" variant="contained" startIcon={<SaveRoundedIcon />} onClick={handleSave} disabled={!dirty}>
               保存{dirty ? ' *' : ''}
             </Button>
           </Box>
@@ -609,6 +663,54 @@ export default function DatasetDetail() {
             </Box>
           </Box>
         </DialogContent>
+      </Dialog>
+
+      <PreprocessDialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        onConfirm={handleExportWithPreprocess}
+        title="保存數據集 — 預處理與增強"
+        confirmLabel="保存到本地"
+      />
+
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => !deletingDataset && setDeleteConfirmOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: alpha(theme.palette.error.main, 0.12), color: 'error.main' }}>
+            <DeleteForeverRoundedIcon />
+          </Avatar>
+          確認刪除數據集
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            您即將刪除數據集「<strong>{dataset?.name}</strong>」。此操作將永久移除：
+          </Typography>
+          <Box component="ul" sx={{ pl: 3, m: 0, color: 'text.secondary' }}>
+            <Box component="li"><Typography variant="body2">{dataset?.image_count ?? 0} 張圖片</Typography></Box>
+            <Box component="li"><Typography variant="body2">{dataset?.annotation_count ?? 0} 個標註</Typography></Box>
+            <Box component="li"><Typography variant="body2">所有相關訓練任務記錄</Typography></Box>
+          </Box>
+          <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 500 }}>
+            此操作無法復原，建議先「保存數據集」備份。
+          </Typography>
+        </DialogContent>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteConfirmOpen(false)} disabled={deletingDataset}>取消</Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<DeleteForeverRoundedIcon />}
+            onClick={handleDeleteDataset}
+            disabled={deletingDataset}
+          >
+            {deletingDataset ? '刪除中...' : '確認刪除'}
+          </Button>
+        </Box>
       </Dialog>
     </Box>
   )

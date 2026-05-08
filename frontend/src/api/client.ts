@@ -53,11 +53,43 @@ export interface TrainingJobItem {
   created_at: string
 }
 
+export interface ActiveModel {
+  provider_id: string
+  model: string
+}
+
 export interface Settings {
   dashscope_api_key: string
   dashscope_api_key_set: boolean
   soldier_mode: string
   augmentation_enabled: boolean
+  active_text_model: ActiveModel
+  active_vision_model: ActiveModel
+}
+
+export interface ModelProvider {
+  id: string
+  name: string
+  type: 'dashscope' | 'openai' | 'anthropic'
+  base_url: string
+  models: string[]
+  builtin: boolean
+  api_key_set: boolean
+}
+
+export interface ProviderCreatePayload {
+  name: string
+  type: 'openai' | 'anthropic'
+  api_key: string
+  base_url?: string
+  models?: string[]
+}
+
+export interface ProviderUpdatePayload {
+  name?: string
+  api_key?: string
+  base_url?: string
+  models?: string[]
 }
 
 export interface DatasetStats {
@@ -192,6 +224,15 @@ export const runLabeling = (data: {
 export const getLabelingStatus = (jobId: number) => api.get<LabelingStatusResponse>(`/labeling/status/${jobId}`)
 export const getLabelingJobs = () => api.get('/labeling/jobs')
 
+// Prompt optimizer
+export interface PromptSuggestion {
+  label: string
+  title: string
+  text: string
+}
+export const optimizePrompt = (instruction: string) =>
+  api.post<{ suggestions: PromptSuggestion[] }>('/labeling/optimize-prompt', { instruction })
+
 // AI Review
 export const runReview = (data: { dataset_id: number; image_ids?: number[] }) =>
   api.post('/labeling/review', data)
@@ -257,6 +298,16 @@ export const getAugmentationJob = (jobId: number) =>
 // Settings
 export const getSettings = () => api.get<Settings>('/settings')
 export const updateSettings = (data: Partial<Settings>) => api.put('/settings', data)
+
+// Model providers
+export const getProviders = () => api.get<ModelProvider[]>('/settings/providers')
+export const createProvider = (data: ProviderCreatePayload) =>
+  api.post<ModelProvider>('/settings/providers', data)
+export const updateProvider = (id: string, data: ProviderUpdatePayload) =>
+  api.put(`/settings/providers/${id}`, data)
+export const deleteProvider = (id: string) => api.delete(`/settings/providers/${id}`)
+export const setActiveModel = (data: { role: 'text' | 'vision'; provider_id: string; model: string }) =>
+  api.put('/settings/active-model', data)
 
 // Health
 export const healthCheck = () => api.get('/health')

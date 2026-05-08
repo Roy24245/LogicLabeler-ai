@@ -56,7 +56,7 @@ export default function ClassManager({ dataset, stats, onRefresh }: Props) {
         <Typography variant="h6">類別管理</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button size="small" startIcon={<CallMergeRoundedIcon />} onClick={() => setMergeOpen(true)} disabled={classes.length < 2}>合併</Button>
-          <Button size="small" variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setAddOpen(true)} sx={{ borderRadius: 3 }}>新增類別</Button>
+          <Button size="small" variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setAddOpen(true)}>新增類別</Button>
         </Box>
       </Box>
 

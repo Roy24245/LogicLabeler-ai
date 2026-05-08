@@ -11,11 +11,9 @@ import logging
 from io import BytesIO
 from typing import Any
 
-import dashscope
-from dashscope import MultiModalConversation
 from PIL import Image as PILImage
 
-from app.config import settings
+from app.services import model_providers as mp
 
 logger = logging.getLogger(__name__)
 
@@ -61,18 +59,18 @@ def review_single_annotation(
     prompt = REVIEW_PROMPT_TEMPLATE.format(class_name=class_name, x=x, y=y, w=w, h=h)
 
     try:
-        response = MultiModalConversation.call(
-            model="qwen-vl-plus",
-            messages=[{"role": "user", "content": [{"image": data_uri}, {"text": prompt}]}],
+        text = mp.vision_complete(
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": data_uri}},
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ],
             temperature=0.1,
         )
-        if response.status_code != 200:
-            logger.error("Review VLM error: %s", response)
-            return _default_result(annotation)
-
-        text = response.output.choices[0].message.content
-        if isinstance(text, list):
-            text = text[0].get("text", "")
         return _parse_review_result(text, annotation)
 
     except Exception as e:
@@ -85,8 +83,6 @@ def review_image_annotations(
     annotations: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Review all annotations on a single image."""
-    dashscope.api_key = settings.dashscope_api_key
-
     try:
         pil_img = PILImage.open(image_path)
     except Exception as e:

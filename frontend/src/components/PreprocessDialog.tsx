@@ -205,7 +205,7 @@ export default function PreprocessDialog({ open, onClose, onConfirm, title = '�
         <Button onClick={handleSkip} color="inherit">跳過（不使用增強）</Button>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={onClose}>取消</Button>
-          <Button onClick={handleConfirm} variant="contained" sx={{ borderRadius: 3 }}>
+          <Button onClick={handleConfirm} variant="contained">
             {confirmLabel}{selectedAug.size > 0 && ` (${selectedAug.size})`}
           </Button>
         </Box>
