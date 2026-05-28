@@ -18,9 +18,25 @@ from app.config import settings
 from app.models import Annotation, Dataset, Image
 
 
+def _resolve_unique_path(base_dir: Path, stem: str, suffix: str = ".jpg") -> Path:
+    """Return a path that does not exist yet by appending _1, _2, ... when needed."""
+    base_dir.mkdir(parents=True, exist_ok=True)
+    candidate = base_dir / f"{stem}{suffix}"
+    if not candidate.exists():
+        return candidate
+    counter = 1
+    while True:
+        candidate = base_dir / f"{stem}_{counter}{suffix}"
+        if not candidate.exists():
+            return candidate
+        counter += 1
+
+
 def _convert_to_jpg(file_bytes: bytes, target_path: Path) -> tuple[bytes, str, int, int]:
-    """Convert any image to JPEG. Returns (jpg_bytes, jpg_filename, width, height).
-    target_path should be the desired output path WITHOUT extension — .jpg is appended.
+    """Convert any image to JPEG with collision-safe naming.
+    Returns (jpg_bytes, jpg_filename, width, height).
+    target_path is a hint (without extension); the actual filename will be deduplicated
+    against existing files in the same directory by appending _1, _2, ... when needed.
     """
     pil = PILImage.open(BytesIO(file_bytes))
     if pil.mode in ("RGBA", "P", "LA"):
@@ -28,7 +44,7 @@ def _convert_to_jpg(file_bytes: bytes, target_path: Path) -> tuple[bytes, str, i
     elif pil.mode != "RGB":
         pil = pil.convert("RGB")
     w, h = pil.size
-    jpg_path = target_path.with_suffix(".jpg")
+    jpg_path = _resolve_unique_path(target_path.parent, target_path.stem, ".jpg")
     pil.save(jpg_path, "JPEG", quality=95)
     with open(jpg_path, "rb") as f:
         jpg_bytes = f.read()
@@ -81,17 +97,15 @@ def delete_dataset(db: Session, dataset_id: int) -> bool:
 def add_image_to_dataset(db: Session, dataset_id: int, filename: str, file_bytes: bytes) -> Image:
     ds_dir = settings.datasets_dir / str(dataset_id) / "images"
     ds_dir.mkdir(parents=True, exist_ok=True)
-    stem = Path(filename).stem
+    stem = Path(filename or "image").stem or "image"
     target_base = ds_dir / stem
     _, jpg_name, w, h = _convert_to_jpg(file_bytes, target_base)
     jpg_path = ds_dir / jpg_name
     img = Image(dataset_id=dataset_id, filename=jpg_name, filepath=str(jpg_path), width=w, height=h)
     db.add(img)
-    ds = db.query(Dataset).filter(Dataset.id == dataset_id).first()
-    if ds:
-        ds.image_count = db.query(Image).filter(Image.dataset_id == dataset_id).count() + 1
     db.commit()
     db.refresh(img)
+    _sync_counts(db, dataset_id)
     return img
 
 
@@ -126,10 +140,8 @@ def delete_image(db: Session, image_id: int) -> bool:
         os.remove(img.filepath)
     dataset_id = img.dataset_id
     db.delete(img)
-    ds = db.query(Dataset).filter(Dataset.id == dataset_id).first()
-    if ds:
-        ds.image_count = max(0, db.query(Image).filter(Image.dataset_id == dataset_id).count() - 1)
     db.commit()
+    _sync_counts(db, dataset_id)
     return True
 
 
@@ -161,15 +173,24 @@ def update_annotations(db: Session, image_id: int, annotations_data: list[dict])
     db.query(Annotation).filter(Annotation.image_id == image_id).delete()
     results = []
     for a in annotations_data:
-        ann = Annotation(image_id=image_id, class_name=a["class_name"], bbox=a.get("bbox"), confidence=a.get("confidence"), source=a.get("source", "manual"))
+        ann = Annotation(
+            image_id=image_id,
+            class_name=a["class_name"],
+            shape_type=a.get("shape_type") or "bbox",
+            bbox=a.get("bbox"),
+            points=a.get("points"),
+            confidence=a.get("confidence"),
+            source=a.get("source", "manual"),
+            attributes=a.get("attributes") or {},
+            locked=bool(a.get("locked", False)),
+            note=a.get("note"),
+        )
         db.add(ann)
         results.append(ann)
+    db.commit()
     img = db.query(Image).filter(Image.id == image_id).first()
     if img:
-        ds = db.query(Dataset).filter(Dataset.id == img.dataset_id).first()
-        if ds:
-            ds.annotation_count = db.query(Annotation).join(Image).filter(Image.dataset_id == ds.id).count() + len(results)
-    db.commit()
+        _sync_counts(db, img.dataset_id)
     for r in results:
         db.refresh(r)
     return results
@@ -461,45 +482,205 @@ def import_voc_zip(db: Session, dataset_id: int, zip_bytes: bytes):
     _sync_counts(db, dataset_id)
 
 
+def _detect_export_mode(task_type: str | None, annotations: list[Annotation]) -> str:
+    """Decide export sub-format based on task_type or annotation shape coverage."""
+    tt = (task_type or "detection").lower()
+    if tt in ("segmentation", "instance_segmentation", "seg"):
+        return "segmentation"
+    if tt in ("pose", "keypoint", "keypoints"):
+        return "pose"
+    if tt in ("obb", "rotated", "oriented"):
+        return "obb"
+    shapes = {(getattr(a, "shape_type", None) or "bbox") for a in annotations}
+    if "polygon" in shapes:
+        return "segmentation"
+    if "keypoint" in shapes:
+        return "pose"
+    if "obb" in shapes:
+        return "obb"
+    return "detection"
+
+
+def _bbox_to_polygon(bbox: dict) -> list[list[float]]:
+    x, y, w, h = bbox["x"], bbox["y"], bbox["w"], bbox["h"]
+    return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
+
+
+def _obb_corners(obb: dict) -> list[list[float]]:
+    """Convert {cx, cy, w, h, theta(rad)} to 4 corner points in image coordinates."""
+    import math as _math
+    cx = float(obb.get("cx", 0))
+    cy = float(obb.get("cy", 0))
+    w = float(obb.get("w", 0))
+    h = float(obb.get("h", 0))
+    t = float(obb.get("theta", 0))
+    cos_t, sin_t = _math.cos(t), _math.sin(t)
+    half = [(-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2)]
+    return [[cx + dx * cos_t - dy * sin_t, cy + dx * sin_t + dy * cos_t] for dx, dy in half]
+
+
+def _build_yolo_line(
+    mode: str,
+    cls_idx: int,
+    ann: Annotation,
+    img_w: int,
+    img_h: int,
+    keypoint_count: int = 0,
+) -> str | None:
+    """Encode one annotation as a YOLO label line for the active export mode."""
+    if not img_w or not img_h:
+        return None
+    bbox = ann.bbox
+    shape = (getattr(ann, "shape_type", None) or "bbox")
+
+    if mode == "segmentation":
+        pts: list[list[float]] | None = None
+        if shape == "polygon" and isinstance(ann.points, list) and len(ann.points) >= 3:
+            pts = [[float(p[0]), float(p[1])] for p in ann.points]
+        elif bbox:
+            pts = _bbox_to_polygon(bbox)
+        if not pts:
+            return None
+        flat = " ".join(f"{p[0] / img_w:.6f} {p[1] / img_h:.6f}" for p in pts)
+        return f"{cls_idx} {flat}"
+
+    if mode == "pose":
+        if not bbox:
+            return None
+        bx, by, bw, bh = bbox["x"], bbox["y"], bbox["w"], bbox["h"]
+        cx_n = (bx + bw / 2) / img_w
+        cy_n = (by + bh / 2) / img_h
+        nw = bw / img_w
+        nh = bh / img_h
+        head = f"{cls_idx} {cx_n:.6f} {cy_n:.6f} {nw:.6f} {nh:.6f}"
+        kps_out: list[str] = []
+        kps_in: list[dict] = []
+        if shape == "keypoint" and isinstance(ann.points, list):
+            kps_in = [p for p in ann.points if isinstance(p, dict)]
+        for i in range(keypoint_count):
+            if i < len(kps_in):
+                k = kps_in[i]
+                kx = float(k.get("x", 0)) / img_w
+                ky = float(k.get("y", 0)) / img_h
+                kv = int(k.get("v", 2))
+                kps_out.append(f"{kx:.6f} {ky:.6f} {kv}")
+            else:
+                kps_out.append("0 0 0")
+        return head + " " + " ".join(kps_out) if kps_out else head
+
+    if mode == "obb":
+        corners: list[list[float]] | None = None
+        if shape == "obb" and isinstance(ann.points, dict):
+            corners = _obb_corners(ann.points)
+        elif shape == "obb" and isinstance(ann.points, list) and len(ann.points) == 4:
+            corners = [[float(p[0]), float(p[1])] for p in ann.points]
+        elif bbox:
+            corners = _bbox_to_polygon(bbox)
+        if not corners:
+            return None
+        flat = " ".join(f"{c[0] / img_w:.6f} {c[1] / img_h:.6f}" for c in corners)
+        return f"{cls_idx} {flat}"
+
+    # detection (default)
+    if not bbox:
+        return None
+    bx, by, bw, bh = bbox["x"], bbox["y"], bbox["w"], bbox["h"]
+    cx_n = (bx + bw / 2) / img_w
+    cy_n = (by + bh / 2) / img_h
+    nw = bw / img_w
+    nh = bh / img_h
+    return f"{cls_idx} {cx_n:.6f} {cy_n:.6f} {nw:.6f} {nh:.6f}"
+
+
 def export_yolo(db: Session, dataset_id: int) -> bytes:
-    """Export dataset in YOLO format as ZIP bytes, organized by split."""
+    """Export dataset in YOLO format as ZIP bytes, organized by split.
+
+    Automatically chooses the YOLO sub-format (detection / seg / pose / OBB) based on
+    the dataset task_type and the shape_types present in annotations.
+    """
     ds = db.query(Dataset).filter(Dataset.id == dataset_id).first()
     if not ds:
         raise ValueError("Dataset not found")
     classes: list[str] = list(ds.label_classes or [])
     images = db.query(Image).filter(Image.dataset_id == dataset_id).all()
+    all_anns = db.query(Annotation).join(Image).filter(Image.dataset_id == dataset_id).all()
+    mode = _detect_export_mode(ds.task_type, all_anns)
     has_splits = any(getattr(img, "split", None) for img in images)
+
+    kp_schema = getattr(ds, "keypoint_schema", None) or {}
+    kp_names: list[str] = list(kp_schema.get("names") or [])
+    keypoint_count = len(kp_names)
+    skeleton = kp_schema.get("skeleton") or []
+
     buf = BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for img in images:
             sp = (getattr(img, "split", None) or "train") if has_splits else ""
             img_prefix = f"{sp}/images" if sp else "images"
             lbl_prefix = f"{sp}/labels" if sp else "labels"
+            mask_prefix = f"{sp}/masks" if sp else "masks"
             if os.path.exists(img.filepath):
                 zf.write(img.filepath, f"{img_prefix}/{img.filename}")
             anns = db.query(Annotation).filter(Annotation.image_id == img.id).all()
-            lines = []
+            lines: list[str] = []
+            mask_arr = None
             for a in anns:
-                if not a.bbox:
-                    continue
                 cls_idx = classes.index(a.class_name) if a.class_name in classes else -1
                 if cls_idx < 0:
                     classes.append(a.class_name)
                     cls_idx = len(classes) - 1
-                bx, by, bw, bh = a.bbox["x"], a.bbox["y"], a.bbox["w"], a.bbox["h"]
-                cx_n = (bx + bw / 2) / img.width if img.width else 0
-                cy_n = (by + bh / 2) / img.height if img.height else 0
-                nw = bw / img.width if img.width else 0
-                nh = bh / img.height if img.height else 0
-                lines.append(f"{cls_idx} {cx_n:.6f} {cy_n:.6f} {nw:.6f} {nh:.6f}")
+                line = _build_yolo_line(mode, cls_idx, a, img.width, img.height, keypoint_count)
+                if line:
+                    lines.append(line)
+                # Generate composite PNG mask for segmentation tasks.
+                if mode == "segmentation" and (getattr(a, "shape_type", None) == "polygon"):
+                    if mask_arr is None and img.width and img.height:
+                        try:
+                            from app.services.segment_assist import polygon_to_mask
+                            import numpy as _np
+                            mask_arr = _np.zeros((img.height, img.width), dtype=_np.uint8)
+                        except Exception:
+                            mask_arr = None
+                    if mask_arr is not None and isinstance(a.points, list) and len(a.points) >= 3:
+                        try:
+                            from app.services.segment_assist import polygon_to_mask
+                            piece = polygon_to_mask(
+                                [[float(p[0]), float(p[1])] for p in a.points],
+                                img.width,
+                                img.height,
+                            )
+                            mask_arr[piece > 0] = (cls_idx + 1) & 0xFF
+                        except Exception:
+                            pass
             stem = Path(img.filename).stem
             zf.writestr(f"{lbl_prefix}/{stem}.txt", "\n".join(lines))
+            if mask_arr is not None:
+                try:
+                    import io as _io
+                    from PIL import Image as _PIL
+                    pil = _PIL.fromarray(mask_arr)
+                    out = _io.BytesIO()
+                    pil.save(out, format="PNG")
+                    zf.writestr(f"{mask_prefix}/{stem}.png", out.getvalue())
+                except Exception:
+                    pass
+
         zf.writestr("classes.txt", "\n".join(classes))
+
         if has_splits:
-            yaml_content = f"train: train/images\nval: val/images\ntest: test/images\nnc: {len(classes)}\nnames: {classes}\n"
+            yaml_lines = ["train: train/images", "val: val/images", "test: test/images"]
         else:
-            yaml_content = f"train: images\nval: images\nnc: {len(classes)}\nnames: {classes}\n"
-        zf.writestr("data.yaml", yaml_content)
+            yaml_lines = ["train: images", "val: images"]
+        yaml_lines.append(f"nc: {len(classes)}")
+        yaml_lines.append(f"names: {classes}")
+        if mode == "pose" and keypoint_count:
+            yaml_lines.append(f"kpt_shape: [{keypoint_count}, 3]")
+            if skeleton:
+                yaml_lines.append(f"skeleton: {skeleton}")
+            if kp_names:
+                yaml_lines.append(f"keypoint_names: {kp_names}")
+        yaml_lines.append(f"task: {mode}")
+        zf.writestr("data.yaml", "\n".join(yaml_lines) + "\n")
     return buf.getvalue()
 
 

@@ -20,8 +20,8 @@ interface AppState {
   onboardingCompleted: boolean
   setOnboardingCompleted: (v: boolean) => void
 
-  snackbar: { open: boolean; message: string; severity: 'success' | 'error' | 'info' }
-  showSnackbar: (message: string, severity?: 'success' | 'error' | 'info') => void
+  snackbar: { open: boolean; message: string; severity: 'success' | 'error' | 'info' | 'warning' }
+  showSnackbar: (message: string, severity?: 'success' | 'error' | 'info' | 'warning') => void
   closeSnackbar: () => void
 }
 

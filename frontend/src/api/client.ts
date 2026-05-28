@@ -2,12 +2,18 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api' })
 
+export interface KeypointSchema {
+  names: string[]
+  skeleton: [number, number][]
+}
+
 export interface Dataset {
   id: number
   name: string
   description: string
   task_type: string
   label_classes: string[]
+  keypoint_schema?: KeypointSchema | null
   image_count: number
   annotation_count: number
   labeled_image_count: number
@@ -23,19 +29,43 @@ export interface ImageItem {
   height: number
   is_augmented: boolean
   split: string | null
+  verified?: boolean
+  tags?: string[]
+  note?: string | null
   annotation_count: number
   created_at: string
+}
+
+export type ShapeType = 'bbox' | 'polygon' | 'keypoint' | 'obb'
+
+export interface BBox { x: number; y: number; w: number; h: number }
+
+export interface KeypointPoint { x: number; y: number; v: number; name?: string }
+
+export interface OBBPoints { cx: number; cy: number; w: number; h: number; theta: number }
+
+export interface AnnotationAttributes {
+  occluded?: boolean
+  truncated?: boolean
+  blur?: boolean
+  custom?: Record<string, unknown>
+  [key: string]: unknown
 }
 
 export interface AnnotationItem {
   id: number
   image_id: number
   class_name: string
-  bbox: { x: number; y: number; w: number; h: number } | null
+  shape_type: ShapeType
+  bbox: BBox | null
+  points: number[][] | KeypointPoint[] | OBBPoints | null
   confidence: number | null
   source: string
   review_status: 'approved' | 'rejected' | 'needs_adjustment' | null
   review_comment: string | null
+  attributes: AnnotationAttributes
+  locked: boolean
+  note: string | null
 }
 
 export interface TrainingJobItem {
@@ -113,7 +143,7 @@ export const getDatasets = () => api.get<Dataset[]>('/datasets')
 export const getDataset = (id: number) => api.get<Dataset>(`/datasets/${id}`)
 export const createDataset = (data: { name: string; description?: string; task_type?: string; label_classes?: string[] }) =>
   api.post<Dataset>('/datasets', data)
-export const updateDataset = (id: number, data: { name?: string; description?: string; task_type?: string; label_classes?: string[] | null }) =>
+export const updateDataset = (id: number, data: { name?: string; description?: string; task_type?: string; label_classes?: string[] | null; keypoint_schema?: KeypointSchema | null }) =>
   api.put<Dataset>(`/datasets/${id}`, data)
 export const deleteDataset = (id: number) => api.delete(`/datasets/${id}`)
 export const importDataset = (id: number, file: File, format: string) => {
@@ -149,16 +179,46 @@ export const uploadImages = (datasetId: number, files: File[]) => {
 export const deleteImage = (id: number) => api.delete(`/images/${id}`)
 export const updateImage = (id: number, data: { split?: string | null }) =>
   api.put<ImageItem>(`/images/${id}`, data)
+export const updateImageMeta = (id: number, data: { verified?: boolean; tags?: string[]; note?: string | null; split?: string | null }) =>
+  api.put<ImageItem>(`/images/${id}/meta`, data)
 export const batchDeleteImages = (datasetId: number, imageIds: number[]) =>
   api.post(`/datasets/${datasetId}/images/batch-delete`, { image_ids: imageIds })
 export const convertImagesToJpg = (datasetId: number) =>
   api.post<{ ok: boolean; converted: number }>(`/datasets/${datasetId}/images/convert-jpg`)
 
 // Annotations
+export type AnnotationPayload = {
+  class_name: string
+  shape_type?: ShapeType
+  bbox?: BBox | null
+  points?: number[][] | KeypointPoint[] | OBBPoints | null
+  confidence?: number | null
+  source?: string
+  attributes?: AnnotationAttributes
+  locked?: boolean
+  note?: string | null
+}
 export const getAnnotations = (imageId: number) =>
   api.get<AnnotationItem[]>(`/images/${imageId}/annotations`)
-export const updateAnnotations = (imageId: number, annotations: Omit<AnnotationItem, 'id' | 'image_id' | 'review_status' | 'review_comment'>[]) =>
+export const updateAnnotations = (imageId: number, annotations: AnnotationPayload[]) =>
   api.put<AnnotationItem[]>(`/images/${imageId}/annotations`, annotations)
+
+// AI assist
+export interface SegmentResult {
+  success: boolean
+  points?: [number, number][]
+  bbox?: BBox
+  error?: string
+}
+export const assistSegment = (data: { image_id: number; type: 'click' | 'bbox'; point?: [number, number]; bbox?: BBox }) =>
+  api.post<SegmentResult>('/assist/segment', data)
+
+export interface AutoLabelResult {
+  success: boolean
+  detections: { class_name: string; bbox: BBox; confidence: number }[]
+}
+export const assistAutolabelImage = (data: { image_id: number; classes?: string[]; instruction?: string; mode?: string }) =>
+  api.post<AutoLabelResult>('/assist/autolabel-image', data)
 
 // Class management
 export const renameClass = (datasetId: number, oldName: string, newName: string) =>

@@ -13,20 +13,8 @@ from app.database import init_db
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    _migrate_db()
     _load_settings_from_db()
     yield
-
-
-def _migrate_db():
-    from sqlalchemy import inspect, text
-    from app.database import engine
-    insp = inspect(engine)
-    with engine.connect() as conn:
-        img_cols = [c["name"] for c in insp.get_columns("images")]
-        if "split" not in img_cols:
-            conn.execute(text("ALTER TABLE images ADD COLUMN split VARCHAR(16)"))
-            conn.commit()
 
 
 def _load_settings_from_db():
@@ -69,13 +57,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.api import datasets, labeling, training, augmentation, ws, settings as settings_api  # noqa: E402
+from app.api import datasets, labeling, training, augmentation, ws, settings as settings_api, annotation_assist  # noqa: E402
 
 app.include_router(datasets.router, prefix="/api")
 app.include_router(labeling.router, prefix="/api")
 app.include_router(training.router, prefix="/api")
 app.include_router(augmentation.router, prefix="/api")
 app.include_router(settings_api.router, prefix="/api")
+app.include_router(annotation_assist.router, prefix="/api")
 app.include_router(ws.router)
 
 import os

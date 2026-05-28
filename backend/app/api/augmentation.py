@@ -145,7 +145,11 @@ def _auto_label_images(job_id: int, dataset_id: int, image_ids: list[int], instr
         targets = plan.get("targets", [])
         logic_rules = plan.get("logic_rules", [])
         detection_prompts = plan.get("detection_prompts", {})
+        plan_examples = plan.get("examples", {}) or {}
+        plan_open_vocab = bool(plan.get("open_vocabulary", False))
         _job_log(job_id, f"[Commander] 目標類別: {targets}")
+        if plan_open_vocab:
+            _job_log(job_id, f"[Commander] open_vocabulary=ON, 範例品種={plan_examples}")
 
         mode = settings.soldier_mode
         labeled_count = 0
@@ -160,7 +164,9 @@ def _auto_label_images(job_id: int, dataset_id: int, image_ids: list[int], instr
 
             try:
                 detections = soldier.detect_objects(
-                    img.filepath, targets, detection_prompts, mode
+                    img.filepath, targets, detection_prompts, mode,
+                    examples=plan_examples,
+                    open_vocabulary=plan_open_vocab,
                 )
                 _job_log(job_id, f"  檢測到 {len(detections)} 個物件")
 

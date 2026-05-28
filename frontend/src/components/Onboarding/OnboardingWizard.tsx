@@ -352,7 +352,7 @@ export default function OnboardingWizard() {
                   <CardContent>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>使用預設 Qwen 模型</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      跳過此步，直接使用內建 DashScope 的 qwen-plus / qwen-vl-plus
+                      跳過此步，直接使用內建 DashScope 的 qwen-plus / qwen3.6-plus / qwen-vl-plus
                     </Typography>
                   </CardContent>
                 </Card>

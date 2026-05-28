@@ -21,13 +21,22 @@ def sahi_detect(
     nms_threshold: float = 0.5,
     image_width: int = 0,
     image_height: int = 0,
+    examples: dict[str, list[str]] | None = None,
+    open_vocabulary: bool = False,
 ) -> list[dict[str, Any]]:
     """Run detection with SAHI slicing for high-resolution images.
 
     If image dimensions are smaller than slice_size, runs detection directly.
     """
+    examples = examples or {}
     if image_width <= slice_size and image_height <= slice_size:
-        return detect_fn(image_path, targets, detection_prompts)
+        return detect_fn(
+            image_path,
+            targets,
+            detection_prompts,
+            examples=examples,
+            open_vocabulary=open_vocabulary,
+        )
 
     from PIL import Image as PILImage
     import tempfile
@@ -50,7 +59,13 @@ def sahi_detect(
                 tmp_path = tmp.name
 
             try:
-                dets = detect_fn(tmp_path, targets, detection_prompts)
+                dets = detect_fn(
+                    tmp_path,
+                    targets,
+                    detection_prompts,
+                    examples=examples,
+                    open_vocabulary=open_vocabulary,
+                )
                 for d in dets:
                     bbox = d.get("bbox", {})
                     d["bbox"] = {

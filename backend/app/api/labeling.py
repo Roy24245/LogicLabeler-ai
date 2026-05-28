@@ -271,15 +271,26 @@ def _run_pipeline(job_id: int, request: LabelingRequest):
         for idx, img in enumerate(images):
             _log(job_id, f"\n[Soldier] Processing image {idx + 1}/{len(images)}: {img.filename}")
 
+            plan_examples = plan.get("examples", {}) or {}
+            plan_open_vocab = bool(plan.get("open_vocabulary", False))
+            if plan_open_vocab:
+                _log(job_id, f"  [Commander] open_vocabulary=ON, examples={list(plan_examples.keys())}")
+
             if request.use_sahi and (img.width > 1200 or img.height > 1200):
                 from app.core.sahi_utils import sahi_detect
                 detections = sahi_detect(
                     image_path=img.filepath,
-                    detect_fn=lambda p, t, d: soldier.detect_objects(p, t, d, mode),
+                    detect_fn=lambda p, t, d, examples=None, open_vocabulary=False: soldier.detect_objects(
+                        p, t, d, mode,
+                        examples=examples,
+                        open_vocabulary=open_vocabulary,
+                    ),
                     targets=plan.get("targets", []),
                     detection_prompts=plan.get("detection_prompts", {}),
                     image_width=img.width,
                     image_height=img.height,
+                    examples=plan_examples,
+                    open_vocabulary=plan_open_vocab,
                 )
                 _log(job_id, f"  [SAHI] Detected {len(detections)} objects (with slicing)")
             else:
@@ -288,6 +299,8 @@ def _run_pipeline(job_id: int, request: LabelingRequest):
                     plan.get("targets", []),
                     plan.get("detection_prompts", {}),
                     mode,
+                    examples=plan_examples,
+                    open_vocabulary=plan_open_vocab,
                 )
                 _log(job_id, f"  Detected {len(detections)} objects")
 

@@ -21,6 +21,7 @@ class DatasetCreate(BaseModel):
     description: str = ""
     task_type: str = "detection"
     label_classes: list[str] | None = None
+    keypoint_schema: dict | None = None
 
 
 class DatasetUpdate(BaseModel):
@@ -28,13 +29,19 @@ class DatasetUpdate(BaseModel):
     description: str | None = None
     task_type: str | None = None
     label_classes: list | None = None
+    keypoint_schema: dict | None = None
 
 
 class AnnotationIn(BaseModel):
     class_name: str
+    shape_type: str = "bbox"
     bbox: dict | None = None
+    points: list | dict | None = None
     confidence: float | None = None
     source: str = "manual"
+    attributes: dict | None = None
+    locked: bool = False
+    note: str | None = None
 
 
 class ClassRename(BaseModel):
@@ -59,6 +66,13 @@ class BatchSplitRequest(BaseModel):
 
 
 class ImageUpdate(BaseModel):
+    split: str | None = None
+
+
+class ImageMetaUpdate(BaseModel):
+    verified: bool | None = None
+    tags: list[str] | None = None
+    note: str | None = None
     split: str | None = None
 
 
@@ -141,6 +155,14 @@ def delete_image(image_id: int, db: Session = Depends(get_db)):
 
 @router.put("/images/{image_id}")
 def update_image(image_id: int, body: ImageUpdate, db: Session = Depends(get_db)):
+    img = svc.update_image(db, image_id, **body.model_dump(exclude_unset=True))
+    if not img:
+        raise HTTPException(404, "Image not found")
+    return _img_dict(img)
+
+
+@router.put("/images/{image_id}/meta")
+def update_image_meta(image_id: int, body: ImageMetaUpdate, db: Session = Depends(get_db)):
     img = svc.update_image(db, image_id, **body.model_dump(exclude_unset=True))
     if not img:
         raise HTTPException(404, "Image not found")
@@ -317,6 +339,7 @@ def _ds_dict(ds, db: Session | None = None):
         "description": ds.description,
         "task_type": ds.task_type,
         "label_classes": ds.label_classes,
+        "keypoint_schema": getattr(ds, "keypoint_schema", None),
         "image_count": ds.image_count,
         "annotation_count": ds.annotation_count,
         "labeled_image_count": labeled,
@@ -336,6 +359,9 @@ def _img_dict(img):
         "height": img.height,
         "is_augmented": img.is_augmented,
         "split": getattr(img, "split", None),
+        "verified": bool(getattr(img, "verified", False) or False),
+        "tags": getattr(img, "tags", None) or [],
+        "note": getattr(img, "note", None),
         "annotation_count": ann_count,
         "created_at": img.created_at.isoformat() if img.created_at else None,
     }
@@ -346,9 +372,14 @@ def _ann_dict(a):
         "id": a.id,
         "image_id": a.image_id,
         "class_name": a.class_name,
+        "shape_type": getattr(a, "shape_type", None) or "bbox",
         "bbox": a.bbox,
+        "points": getattr(a, "points", None),
         "confidence": a.confidence,
         "source": a.source,
         "review_status": a.review_status,
         "review_comment": a.review_comment,
+        "attributes": getattr(a, "attributes", None) or {},
+        "locked": bool(getattr(a, "locked", False) or False),
+        "note": getattr(a, "note", None),
     }

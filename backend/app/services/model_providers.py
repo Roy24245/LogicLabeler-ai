@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 BUILTIN_DASHSCOPE_ID = "builtin_dashscope"
 BUILTIN_DASHSCOPE_MODELS = [
     "qwen-plus",
+    "qwen3.6-plus",
     "qwen-max",
     "qwen-vl-plus",
     "qwen-vl-max",

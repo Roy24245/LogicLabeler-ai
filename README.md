@@ -48,6 +48,7 @@
 - [項目結構](#項目結構)
 - [API 參考](#api-參考)
 - [與競品比較](#與競品比較)
+- [更新日誌（Changelog）](#更新日誌changelog)
 - [License](#license)
 
 ---
@@ -75,6 +76,12 @@
 ###  多智能體 + RAG 自進化
 **Commander → Soldier → Critic → Reviewer** 四階段流水線，每次人工修正都會向量化進入 ChromaDB，下次處理相似場景時自動注入「歷史教訓」作為 Negative Prompts，越用越聰明。
 
+###  Open Vocabulary 細粒度識別
+Commander 會自動判讀「如 / 例如 / 包括但不限於」這類**示例性**用語，把「貓（如英短、布偶、暹羅）」理解為 **主類別 cat + 範例品種**，並開啟 `open_vocabulary` 模式，讓 Soldier 用真實品種（Persian、Tabby、Maine Coon…）命名 class_name，而非被硬塞進範例三選一；遇到無法 100% 辨識的個體會輸出 `cat (uncertain)` 或 `cat (unknown breed)`，**不漏標、不錯標**。當使用者改用「只 / 僅 / strictly」等限定詞，則自動切回封閉類別模式。
+
+###  專業級多形狀標註工具
+Canvas 編輯器內建 **BBox / Polygon / Keypoint / Oriented BBox** 四種形狀工具，加上 **Smart Segment**（OpenCV GrabCut，點一下就生 polygon）、**一鍵 AI 標註本圖**、放大鏡 Loupe、像素網格、Mini-map、邊緣磁吸、屬性面板（occluded / truncated / blur / note）與圖片層級的 verified / tags / split 元資料；資料集 Settings 還能編輯 **Keypoint Schema**（關節名稱 + skeleton edges）。匯出時自動偵測為 YOLO Detect / Segment / Pose / OBB 對應格式。
+
 ###  AI Prompt Optimizer
 標註指令、數據增強指令旁皆內建「優化 Prompt」按鈕。一鍵向 LLM 發起優化，並回傳 **3 種風格**（更具體 / 加入邏輯 / 更精簡）讓您挑選或重新生成。
 
@@ -97,10 +104,19 @@ ultralytics + WebSocket 即時日誌 + Recharts 訓練曲線，停止 / 繼續 (
 
 | 智能體 | 預設模型 | 任務 |
 |---|---|---|
-| **Commander** | 任意文字模型（預設 `qwen-plus`） | 理解自然語言指令，CoT 推理拆解為可執行任務，整合 RAG 歷史教訓 |
-| **Soldier** | 任意視覺模型 / Grounded-SAM | 雙模式目標檢測，高解析度圖自動啟用 SAHI 切片推理 |
+| **Commander** | 任意文字模型（預設 `qwen-plus`） | 理解自然語言指令，CoT 推理拆解為主類別 + `examples` 範例品種 + `open_vocabulary` 旗標，整合 RAG 歷史教訓 |
+| **Soldier** | 任意視覺模型 / Grounded-SAM | 雙模式目標檢測，依 `open_vocabulary` 切換**封閉類別**或**開放詞彙（細粒度品種命名）**，高解析度圖自動啟用 SAHI 切片推理 |
 | **Critic** | 任意視覺模型 | 幾何邏輯校驗 (`is_wearing` / `contains` / `IoU` …) + VLM 裁剪驗證 + 多輪辯論 |
 | **Reviewer** | 任意視覺模型 | 標註完成後逐一裁剪 BBox 送入 VLM 二次審查，支援一鍵套用修正 |
+
+#### 開放詞彙 vs 封閉類別 — Commander 怎麼判讀？
+
+| 使用者用語 | 例 | Commander 輸出 |
+|---|---|---|
+| 「**如** / 例如 / 比如 / 包括但不限於 / e.g. / such as」 | 「貓（**如**英短、布偶、暹羅）」 | `targets=["cat"]`、`examples={"cat":[英短,布偶,暹羅]}`、`open_vocabulary=true` |
+| 「**只** / 僅 / strictly / must be one of」或單純列舉 | 「**只**檢測 cat、dog、person」 | `targets=["cat","dog","person"]`、`examples={}`、`open_vocabulary=false` |
+
+開啟 open vocabulary 後，Soldier 會被告知「以實際品種命名 `class_name`，範例只是 hint，不限於這些」；不確定時輸出 `<主類別> (uncertain)`，完全無法判斷時輸出 `<主類別> (unknown breed)`，**保證每個物件都被標到**。
 
 ### 🔌 模型供應商管理
 
@@ -133,11 +149,19 @@ ultralytics + WebSocket 即時日誌 + Recharts 訓練曲線，停止 / 繼續 (
 
 ### 📦 數據集管理
 
-- **數據集 CRUD** — 創建、刪除、批量上傳、自動轉 JPG
-- **多格式互通** — 導入 / 導出支援 YOLO、COCO、Pascal VOC ZIP
-- **數據集詳情頁** — 含「保存數據集」（含 Roboflow 風預處理彈窗）與「刪除數據集」確認對話框
-- **圖片瀏覽** — 縮圖網格、分頁載入、篩選（已標註 / 未標註 / 增強圖片）、批量操作
-- **Canvas 標註編輯器** — 拖拽繪製 BBox、移動縮放、Undo/Redo、複製貼上、亮度對比度調整、按類別著色、鍵盤快捷鍵
+- **數據集 CRUD** — 創建、刪除、批量上傳、自動轉 JPG（多次上傳不會覆蓋既有圖片）
+- **多格式互通** — 導入支援 YOLO / COCO / Pascal VOC ZIP；匯出依任務型態自動選擇 YOLO Detect / Segment / Pose / OBB，或 COCO（含 segmentation + keypoints）
+- **數據集詳情頁** — 含「保存數據集」（內建預處理 / 增強配置彈窗）與「刪除數據集」確認對話框
+- **圖片瀏覽** — 縮圖網格、分頁載入、篩選（已標註 / 未標註 / 已驗證 / 增強圖片）、批量操作、verified 視覺徽章
+- **Annotator（內建標註編輯器）**
+  - **四種形狀工具**：BBox · Polygon（點擊加頂點、Enter 收尾、邊中點插入、右鍵刪頂點）· Keypoint（依 dataset schema 命名）· Oriented BBox（拖出矩形 + 旋轉 handle）
+  - **AI 助手**：Smart Segment（GrabCut 點一下生 polygon）、工具列「一鍵自動標註本圖」按鈕（會自動走 Commander → Soldier，享受 open vocabulary 細粒度命名）
+  - **視覺輔助**：放大鏡 Loupe、像素網格、Mini-map、邊緣磁吸、按類別著色 / 顯示隱藏
+  - **編輯操作**：Undo/Redo、複製貼上、鎖定、方向鍵微調、Shift 等比例、座標手動輸入、數字熱鍵切換類別、Fit View、亮度對比度調整
+  - **屬性與元資料**：每個標註支援 occluded / truncated / blur / note 屬性；每張圖支援 `verified` / `tags` / `note` / `split` 元資料
+  - **列表面板**：搜尋、類別 filter chips、Shift 多選、批量改類 / 刪除 / 鎖定
+  - **快捷鍵說明**：工具列 `?` 按鈕展開完整熱鍵表
+- **Keypoint Schema 編輯器** — 在資料集 Settings 定義關節名稱清單與 skeleton edges，匯出 YOLO Pose 時自動寫進 `data.yaml`
 - **類別管理** — CRUD、合併、重命名、分佈圖表可視化
 - **數據分割** — 自動按比例分割 Train / Val / Test，支援手動調整
 - **數據集統計** — 標註數量、類別分佈、寬高比散點圖、尺寸直方圖
@@ -155,7 +179,7 @@ ultralytics + WebSocket 即時日誌 + Recharts 訓練曲線，停止 / 繼續 (
 
 ### 🛠 本地數據預處理
 
-訓練 / 導出前可選擇的 **Roboflow 風格** 本地增強與預處理：
+訓練 / 導出前可選擇的本地增強與預處理：
 
 - **圖像級** — 水平翻轉、隨機旋轉、裁剪、模糊、亮度調整、灰度化、自動對比度
 - **BBox 級** — Cutout、Mosaic
@@ -222,7 +246,7 @@ ultralytics + WebSocket 即時日誌 + Recharts 訓練曲線，停止 / 繼續 (
 │  ┌─ Data Services ───────────────────────────────────────────────┐ │
 │  │  Dataset Mgmt │ AI 增強           │ 本地 Preprocessing         │ │
 │  │  (CRUD/導入/  │ (qwen-image-      │ (OpenCV/PIL                │ │
-│  │   導出/分割)  │  2.0-pro)         │  Roboflow 風格)            │ │
+│  │   導出/分割)  │  2.0-pro)         │  圖像/BBox 增強)           │ │
 │  └────────────────────────────────────────────────────────────────┘ │
 │                                                                    │
 │  ┌─ Training Engine ─────────────────────────────────────────────┐ │
@@ -256,6 +280,8 @@ ultralytics + WebSocket 即時日誌 + Recharts 訓練曲線，停止 / 繼續 (
 ┌───────────────────────────────────────┐
 │  Commander — 語義推理與任務拆解         │
 │  • Chain-of-Thought 推理               │
+│  • 「如/例如/包括但不限於」判讀         │
+│    → 主類別 + examples + open_vocabulary│
 │  • RAG 檢索歷史錯誤注入                 │
 │  • 透過 model_providers 路由到指定模型   │
 │  • 輸出結構化 JSON 執行計劃             │
@@ -265,6 +291,8 @@ ultralytics + WebSocket 即時日誌 + Recharts 訓練曲線，停止 / 繼續 (
 │  Soldier — 目標檢測執行                │
 │  • 模式 A: 視覺 API (Qwen-VL/GPT-4V/Claude-Vision)│
 │  • 模式 B: Grounded-SAM (本地推理)     │
+│  • open_vocabulary=ON → 細粒度品種命名  │
+│    （Persian、Tabby、Mixed…不限範例）   │
 │  • 高解析度圖自動啟用 SAHI 切片推理     │
 │  • 輸出候選 BBox + 置信度               │
 └────────────────┬──────────────────────┘
@@ -340,7 +368,7 @@ ultralytics + WebSocket 即時日誌 + Recharts 訓練曲線，停止 / 繼續 (
 | **可替換供應商** | OpenAI 相容 / Anthropic | 統一抽象層動態切換 |
 | **本地視覺檢測** | Grounded-SAM | Soldier 本地模式 |
 | **圖片生成** | qwen-image-2.0-pro | AI 數據增強（圖像編輯） |
-| **本地增強** | OpenCV + Pillow | Roboflow 風格預處理/增強 |
+| **本地增強** | OpenCV + Pillow | 圖像/BBox 級預處理與增強 |
 | **模型訓練** | ultralytics | YOLOv8 / YOLO11 本地訓練 |
 | **高解析度** | SAHI | 切片推理支持超大尺寸圖像 |
 | **部署** | Docker Compose | 一鍵啟動 3 個微服務 |
@@ -598,13 +626,21 @@ LogicLabeler/
 | 方法 | 路徑 | 說明 |
 |------|------|------|
 | `GET` | `/api/images/{id}/annotations` | 查詢圖片標註 |
-| `PUT` | `/api/images/{id}/annotations` | 更新標註 (觸發 RAG 記憶) |
+| `PUT` | `/api/images/{id}/annotations` | 更新標註（支援 BBox / Polygon / Keypoint / OBB + attributes，觸發 RAG 記憶） |
+| `PUT` | `/api/images/{id}/meta` | 更新圖片 verified / tags / note / split 元資料 |
+
+### AI 標註助手（單張圖即時呼叫）
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| `POST` | `/api/assist/segment` | **Smart Segment**：以 click 或 bbox 為提示，GrabCut 生成 polygon |
+| `POST` | `/api/assist/autolabel-image` | **單圖一鍵自動標註**：自動走 Commander 解析 instruction（享受 open vocabulary）+ Soldier 檢測 |
 
 ### 自動標註 + AI 審查
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| `POST` | `/api/labeling/run` | 啟動自動標註流水線 |
+| `POST` | `/api/labeling/run` | 啟動自動標註流水線（自動套用 open vocabulary 判讀） |
 | `GET` | `/api/labeling/status/{job_id}` | 查詢標註進度 |
 | `POST` | `/api/labeling/review` | 啟動 AI 二次審查 |
 | `GET` | `/api/labeling/review/{job_id}` | 查詢審查進度 |
@@ -652,22 +688,51 @@ LogicLabeler/
 
 ## 與競品比較
 
-| 維度 | Autodistill | GPT-4V 直接標註 | Roboflow | **LogicLabeler** |
-|------|:-----------:|:---------------:|:--------:|:----------------:|
+| 維度 | Autodistill | GPT-4V 直接標註 | CVAT / Label Studio | **LogicLabeler** |
+|------|:-----------:|:---------------:|:-------------------:|:----------------:|
 | 語義推理 | ❌ 僅名詞檢測 | ✅ 強 | ❌ | ✅ **CoT 邏輯推理** |
-| 模型選擇自由度 | 🔶 限定 | ❌ 鎖定 GPT | ❌ | ✅ **DashScope / OpenAI / Anthropic 任選** |
+| **細粒度品種識別** | ❌ | 🔶 強但不可控 | ❌ | ✅ **Open Vocabulary + 範例 hint** |
+| 模型選擇自由度 | 🔶 限定 | ❌ 鎖定 GPT | 🔶 需自接 | ✅ **DashScope / OpenAI / Anthropic 任選** |
 | Prompt Optimizer | ❌ | ❌ | ❌ | ✅ **3 種優化版本** |
+| 多形狀標註 | ❌ | ❌ | ✅ 全面 | ✅ **BBox / Polygon / Keypoint / OBB** |
+| Smart Segment | ❌ | ❌ | 🔶 SAM 外掛 | ✅ **GrabCut（無需下載權重）** |
 | 定位精度 | 🔶 中 | ❌ 幻覺嚴重 | ✅ | ✅ **SAM + SAHI** |
-| 品質控制 | 🔶 固定閾值 | ❌ 無 | 🔶 規則 | ✅ **Agent 對抗辯論** |
+| 品質控制 | 🔶 固定閾值 | ❌ 無 | 🔶 人工審核 | ✅ **Agent 對抗辯論** |
 | 場景適應 | ❌ 需重訓 | 🔶 需微調 | ❌ | ✅ **RAG 即時優化** |
-| AI 增強 | ❌ | ❌ | 🔶 本地變換 | ✅ **AI 生成 + 本地** |
-| 本地預處理 | ❌ | ❌ | ✅ | ✅ |
-| 端到端訓練 | ❌ | ❌ | ✅ | ✅ **YOLO 訓練閉環** |
-| 訓練控制 | ❌ | ❌ | 🔶 | ✅ **停止/繼續/取消** |
+| AI 增強 | ❌ | ❌ | ❌ | ✅ **AI 生成 + 本地** |
+| 本地預處理 | ❌ | ❌ | 🔶 部分 | ✅ |
+| 端到端訓練 | ❌ | ❌ | ❌ | ✅ **YOLO 訓練閉環** |
+| 訓練控制 | ❌ | ❌ | ❌ | ✅ **停止/繼續/取消** |
 | AI 審查 | ❌ | ❌ | ❌ | ✅ **VLM 二次驗證** |
-| 初始化引導 | ❌ | ❌ | 🔶 | ✅ **5 步驟智能精靈** |
+| 初始化引導 | ❌ | ❌ | ❌ | ✅ **5 步驟智能精靈** |
 | Material 3 介面 | ❌ | ❌ | ❌ | ✅ **MUI v6 + 自製主題** |
-| 自部署 | ✅ | ❌ 雲端 | ❌ 雲端 | ✅ **Docker 私有部署** |
+| 自部署 | ✅ | ❌ 雲端 | ✅ | ✅ **Docker 私有部署** |
+
+---
+
+## 更新日誌（Changelog）
+
+### 2026.05 — Open Vocabulary 細粒度識別
+- **Commander**：能判讀「如 / 例如 / 比如 / 包括但不限於 / e.g. / such as」等示例性用語，自動拆解為主類別 + `examples` + `open_vocabulary` 三層結構；單純列舉或「只 / 僅 / strictly」則維持封閉模式（[`backend/app/services/commander.py`](./backend/app/services/commander.py)）
+- **Soldier**：vision prompt 新增開放詞彙分支，要求 VLM 以**實際品種**命名 `class_name`，不確定時輸出 `<主類別> (uncertain)`，完全無法判斷時輸出 `<主類別> (unknown breed)`，並嚴禁硬塞範例品種（[`backend/app/services/soldier.py`](./backend/app/services/soldier.py)）
+- **全鏈路透傳**：`labeling.py` / `augmentation.py` / `sahi_utils.py` / `annotation_assist.py` 全部新增 `examples` 與 `open_vocabulary` 參數
+- **單張圖一鍵 AI 標註**：`/api/assist/autolabel-image` 現在會先過 Commander，再呼叫 Soldier，所以工具列按鈕也享受同樣升級
+
+### 2026.04 — Annotator 全面升級
+- 新形狀：**Polygon / Keypoint / Oriented BBox**
+- 新 AI 助手：**Smart Segment（GrabCut）**、單圖一鍵自動標註
+- 新元資料：標註層級 occluded / truncated / blur / note；圖片層級 verified / tags / note / split
+- 新視覺輔助：放大鏡 Loupe、像素網格、Mini-map、邊緣磁吸
+- 列表面板：搜尋、filter chips、Shift 多選、批量改類 / 刪除 / 鎖定
+- 匯出：自動偵測 YOLO Detect / Segment / Pose / OBB；Polygon 同步輸出 PNG mask
+- 資料集 Settings 新增 **Keypoint Schema 編輯器**（名稱 + skeleton edges）
+- 後端輕量化 SQLite migration：啟動時自動 `ALTER TABLE ADD COLUMN` 補上新欄位
+
+### 2026.03 — Material Design 3 全站重構
+- MUI v6 + 自製 M3 主題，亮 / 暗 / 跟隨系統
+- 5 步驟初始化精靈（含 DashScope API Key 既存偵測）
+- 模型供應商管理：OpenAI 相容 / Anthropic Claude
+- Prompt Optimizer（3 種版本）、訓練生命週期管理（停止 / 繼續 / 取消 / 刪除）
 
 ---
 

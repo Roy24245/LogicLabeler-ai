@@ -1,7 +1,7 @@
 """Preprocessing & Local Augmentation Service.
 
-Applies Roboflow-style image-level and bounding-box-level transforms
-using PIL/OpenCV. All transforms are local — no API calls needed.
+Applies image-level and bounding-box-level transforms using PIL/OpenCV.
+All transforms are local — no API calls needed.
 Augmented images get copies of source annotations with adjusted bboxes.
 """
 from __future__ import annotations
