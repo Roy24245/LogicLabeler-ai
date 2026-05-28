@@ -95,6 +95,7 @@ export interface Settings {
   augmentation_enabled: boolean
   active_text_model: ActiveModel
   active_vision_model: ActiveModel
+  active_soldier_model: ActiveModel
 }
 
 export interface ModelProvider {
@@ -366,7 +367,7 @@ export const createProvider = (data: ProviderCreatePayload) =>
 export const updateProvider = (id: string, data: ProviderUpdatePayload) =>
   api.put(`/settings/providers/${id}`, data)
 export const deleteProvider = (id: string) => api.delete(`/settings/providers/${id}`)
-export const setActiveModel = (data: { role: 'text' | 'vision'; provider_id: string; model: string }) =>
+export const setActiveModel = (data: { role: 'text' | 'vision' | 'soldier'; provider_id: string; model: string }) =>
   api.put('/settings/active-model', data)
 
 // Health

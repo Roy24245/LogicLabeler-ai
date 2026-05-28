@@ -34,6 +34,7 @@ def get_settings(db: Session = Depends(get_db)):
     stored = {s.key: s.value for s in db.query(SystemSetting).all()}
     active_text = stored.get("active_text_model", {}).get("value") or mp.DEFAULT_TEXT_MODEL
     active_vision = stored.get("active_vision_model", {}).get("value") or mp.DEFAULT_VISION_MODEL
+    active_soldier = stored.get("active_soldier_model", {}).get("value") or active_vision
     return {
         "dashscope_api_key": _mask_key(
             stored.get("dashscope_api_key", {}).get("value", app_settings.dashscope_api_key)
@@ -47,6 +48,7 @@ def get_settings(db: Session = Depends(get_db)):
         ),
         "active_text_model": active_text,
         "active_vision_model": active_vision,
+        "active_soldier_model": active_soldier,
     }
 
 
@@ -86,7 +88,7 @@ class ProviderUpdate(BaseModel):
 
 
 class ActiveModelUpdate(BaseModel):
-    role: str  # "text" | "vision"
+    role: str  # "text" | "vision" | "soldier"
     provider_id: str
     model: str
 
@@ -159,6 +161,7 @@ def delete_provider(provider_id: str, db: Session = Depends(get_db)):
     for key, default in (
         ("active_text_model", mp.DEFAULT_TEXT_MODEL),
         ("active_vision_model", mp.DEFAULT_VISION_MODEL),
+        ("active_soldier_model", mp.DEFAULT_VISION_MODEL),
     ):
         row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
         if row and isinstance(row.value, dict):
@@ -172,8 +175,8 @@ def delete_provider(provider_id: str, db: Session = Depends(get_db)):
 
 @router.put("/settings/active-model")
 def set_active_model(body: ActiveModelUpdate, db: Session = Depends(get_db)):
-    if body.role not in {"text", "vision"}:
-        raise HTTPException(400, "role must be 'text' or 'vision'")
+    if body.role not in {"text", "vision", "soldier"}:
+        raise HTTPException(400, "role must be 'text', 'vision', or 'soldier'")
 
     provider = mp.get_provider(body.provider_id)
     if not provider:
@@ -182,7 +185,11 @@ def set_active_model(body: ActiveModelUpdate, db: Session = Depends(get_db)):
         # Allow free-form model name but warn — do not block.
         pass
 
-    key = "active_text_model" if body.role == "text" else "active_vision_model"
+    key = (
+        "active_text_model"
+        if body.role == "text"
+        else "active_vision_model" if body.role == "vision" else "active_soldier_model"
+    )
     _upsert(db, key, {"provider_id": body.provider_id, "model": body.model})
     db.commit()
     mp.reload_active_models()

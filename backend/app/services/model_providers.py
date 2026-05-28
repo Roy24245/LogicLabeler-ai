@@ -50,6 +50,7 @@ DEFAULT_VISION_MODEL = {"provider_id": BUILTIN_DASHSCOPE_ID, "model": "qwen-vl-p
 # In-memory cache of active models for each role (refreshed on settings update).
 _active_text_model: dict[str, str] = dict(DEFAULT_TEXT_MODEL)
 _active_vision_model: dict[str, str] = dict(DEFAULT_VISION_MODEL)
+_active_soldier_model: dict[str, str] = dict(DEFAULT_VISION_MODEL)
 
 
 # ── Storage helpers ───────────────────────────────────────────────
@@ -70,9 +71,10 @@ def _read_setting(key: str, default=None):
 
 def reload_active_models() -> None:
     """Refresh active model selections from DB into in-memory cache."""
-    global _active_text_model, _active_vision_model
+    global _active_text_model, _active_vision_model, _active_soldier_model
     _active_text_model = _read_setting("active_text_model", DEFAULT_TEXT_MODEL) or DEFAULT_TEXT_MODEL
     _active_vision_model = _read_setting("active_vision_model", DEFAULT_VISION_MODEL) or DEFAULT_VISION_MODEL
+    _active_soldier_model = _read_setting("active_soldier_model", DEFAULT_VISION_MODEL) or DEFAULT_VISION_MODEL
 
 
 def list_providers(unmasked: bool = False) -> list[dict]:
@@ -137,6 +139,10 @@ def get_active_vision_model() -> dict:
     return dict(_active_vision_model)
 
 
+def get_active_soldier_model() -> dict:
+    return dict(_active_soldier_model)
+
+
 # ── Public dispatch APIs ──────────────────────────────────────────
 
 def text_complete(
@@ -156,13 +162,14 @@ def vision_complete(
     messages: list[dict],
     temperature: float = 0.1,
     max_tokens: int | None = None,
+    role: str = "vision",
 ) -> str:
     """Run a multimodal completion against the active **vision** provider.
 
     ``messages`` must be in OpenAI chat format with images encoded as
     ``{"type": "image_url", "image_url": {"url": "data:image/...;base64,..."}}``.
     """
-    active = get_active_vision_model()
+    active = get_active_soldier_model() if role == "soldier" else get_active_vision_model()
     return _dispatch(active, messages, temperature, max_tokens, vision=True)
 
 
@@ -241,8 +248,41 @@ def _call_dashscope(
         temperature=temperature,
     )
     if response.status_code != 200:
+        # Some newer DashScope models are only available via the
+        # OpenAI-compatible endpoint and may fail here with
+        # "InvalidParameter ... url error".
+        if (
+            not vision
+            and str(getattr(response, "code", "")).lower() == "invalidparameter"
+            and "url error" in str(getattr(response, "message", "")).lower()
+        ):
+            logger.warning(
+                "DashScope Generation.call failed for model=%s with url error; fallback to compatible-mode API.",
+                model,
+            )
+            return _call_dashscope_compatible(model, messages, temperature, max_tokens)
         raise RuntimeError(f"DashScope error: code={response.code} message={response.message}")
     return response.output.choices[0].message.content or ""
+
+
+def _call_dashscope_compatible(
+    model: str,
+    messages: list[dict],
+    temperature: float,
+    max_tokens: int | None,
+) -> str:
+    """Call DashScope via OpenAI-compatible endpoint as fallback."""
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=settings.dashscope_api_key,
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    )
+    kwargs: dict[str, Any] = dict(model=model, messages=[_to_openai_msg(m) for m in messages], temperature=temperature)
+    if max_tokens:
+        kwargs["max_tokens"] = max_tokens
+    response = client.chat.completions.create(**kwargs)
+    return response.choices[0].message.content or ""
 
 
 def _to_dashscope_msg(msg: dict) -> dict:

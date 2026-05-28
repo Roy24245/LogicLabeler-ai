@@ -139,6 +139,7 @@ def _detect_qwen_vision(
                 }
             ],
             temperature=0.1,
+            role="soldier",
         )
         return _parse_detections(text, image_path)
 

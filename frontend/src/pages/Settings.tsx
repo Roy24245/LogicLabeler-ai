@@ -74,6 +74,7 @@ export default function Settings() {
   const [providers, setProviders] = useState<ModelProvider[]>([])
   const [textModel, setTextModel] = useState<{ provider_id: string; model: string }>({ provider_id: 'builtin_dashscope', model: 'qwen-plus' })
   const [visionModel, setVisionModel] = useState<{ provider_id: string; model: string }>({ provider_id: 'builtin_dashscope', model: 'qwen-vl-plus' })
+  const [soldierModel, setSoldierModel] = useState<{ provider_id: string; model: string }>({ provider_id: 'builtin_dashscope', model: 'qwen-vl-plus' })
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState<ProviderForm>(EMPTY_FORM)
@@ -86,6 +87,8 @@ export default function Settings() {
       setProviders(ps)
       if (s.active_text_model) setTextModel(s.active_text_model)
       if (s.active_vision_model) setVisionModel(s.active_vision_model)
+      if (s.active_soldier_model) setSoldierModel(s.active_soldier_model)
+      else if (s.active_vision_model) setSoldierModel(s.active_vision_model)
     } catch {}
   }
 
@@ -105,12 +108,16 @@ export default function Settings() {
     } catch { showSnackbar('保存失敗', 'error') }
   }
 
-  const handleActiveModel = async (role: 'text' | 'vision', provider_id: string, model: string) => {
+  const handleActiveModel = async (role: 'text' | 'vision' | 'soldier', provider_id: string, model: string) => {
     try {
       await setActiveModel({ role, provider_id, model })
       if (role === 'text') setTextModel({ provider_id, model })
-      else setVisionModel({ provider_id, model })
-      showSnackbar(`已切換${role === 'text' ? '文字' : '視覺'}模型`, 'success')
+      else if (role === 'vision') setVisionModel({ provider_id, model })
+      else setSoldierModel({ provider_id, model })
+      showSnackbar(
+        `已切換${role === 'text' ? '文字' : role === 'vision' ? '視覺' : 'Soldier'}模型`,
+        'success',
+      )
     } catch { showSnackbar('切換失敗', 'error') }
   }
 
@@ -163,6 +170,7 @@ export default function Settings() {
 
   const textProvider = providerOf(textModel.provider_id)
   const visionProvider = providerOf(visionModel.provider_id)
+  const soldierProvider = providerOf(soldierModel.provider_id)
 
   const typePreset = useMemo(() => PROVIDER_PRESETS[form.type], [form.type])
 
@@ -325,8 +333,28 @@ export default function Settings() {
               </Select>
             </FormControl>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-              視覺 API 模式會使用「模型供應商」中選定的視覺模型；Grounded-SAM 在本地運行，精度更高但需 GPU。
+              視覺 API 模式會使用下方 Soldier 專用模型；Grounded-SAM 在本地運行，精度更高但需 GPU。
             </Typography>
+            <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
+              <InputLabel>Soldier 視覺模型（系統設定）</InputLabel>
+              <Select
+                label="Soldier 視覺模型（系統設定）"
+                value={`${soldierModel.provider_id}::${soldierModel.model}`}
+                onChange={(e) => {
+                  const [pid, m] = String(e.target.value).split('::')
+                  handleActiveModel('soldier', pid, m)
+                }}
+              >
+                {providers.flatMap(p => (p.models || []).map(m => (
+                  <MenuItem key={`soldier-${p.id}::${m}`} value={`${p.id}::${m}`}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip label={p.name} size="small" sx={{ height: 18, fontSize: 10 }} />
+                      <Typography variant="body2">{m}</Typography>
+                    </Box>
+                  </MenuItem>
+                )))}
+              </Select>
+            </FormControl>
           </SectionCard>
 
           <SectionCard icon={<AutoAwesomeRoundedIcon fontSize="small" />} title="數據增強">
@@ -377,9 +405,15 @@ export default function Settings() {
                 </Typography>
               </Box>
               <Box sx={{ mb: 1.5 }}>
-                <Typography variant="caption" color="text.secondary">視覺 (Soldier · Critic · Reviewer)</Typography>
+                <Typography variant="caption" color="text.secondary">視覺 (Critic · Reviewer)</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
                   {visionProvider?.name || '—'} <Typography component="span" variant="caption" color="text.secondary">/ {visionModel.model}</Typography>
+                </Typography>
+              </Box>
+              <Box sx={{ mb: 1.5 }}>
+                <Typography variant="caption" color="text.secondary">視覺 (Soldier)</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {soldierProvider?.name || '—'} <Typography component="span" variant="caption" color="text.secondary">/ {soldierModel.model}</Typography>
                 </Typography>
               </Box>
               <Box sx={{ mb: 1.5 }}>
