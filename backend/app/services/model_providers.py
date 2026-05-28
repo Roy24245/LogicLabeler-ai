@@ -155,7 +155,7 @@ def text_complete(
     ``messages`` must be in OpenAI chat format: list of {role, content}.
     """
     active = get_active_text_model()
-    return _dispatch(active, messages, temperature, max_tokens, vision=False)
+    return _dispatch(active, messages, temperature, max_tokens, vision=False, role="text")
 
 
 def vision_complete(
@@ -170,7 +170,7 @@ def vision_complete(
     ``{"type": "image_url", "image_url": {"url": "data:image/...;base64,..."}}``.
     """
     active = get_active_soldier_model() if role == "soldier" else get_active_vision_model()
-    return _dispatch(active, messages, temperature, max_tokens, vision=True)
+    return _dispatch(active, messages, temperature, max_tokens, vision=True, role=role)
 
 
 def encode_image_to_data_url(image_path: str) -> str:
@@ -191,6 +191,7 @@ def _dispatch(
     temperature: float,
     max_tokens: int | None,
     vision: bool,
+    role: str,
 ) -> str:
     provider = get_provider(active.get("provider_id")) or get_provider(BUILTIN_DASHSCOPE_ID)
     if not provider:
@@ -202,11 +203,11 @@ def _dispatch(
     p_type = provider.get("type", "dashscope")
     try:
         if p_type == "dashscope":
-            return _call_dashscope(model, messages, temperature, max_tokens, vision)
+            return _call_dashscope(provider, model, messages, temperature, max_tokens, vision, role)
         if p_type == "openai":
-            return _call_openai(provider, model, messages, temperature, max_tokens)
+            return _call_openai(provider, model, messages, temperature, max_tokens, role)
         if p_type == "anthropic":
-            return _call_anthropic(provider, model, messages, temperature, max_tokens)
+            return _call_anthropic(provider, model, messages, temperature, max_tokens, role)
     except Exception:
         logger.exception("Provider call failed (type=%s, model=%s)", p_type, model)
         raise
@@ -216,11 +217,13 @@ def _dispatch(
 # ── DashScope backend ─────────────────────────────────────────────
 
 def _call_dashscope(
+    provider: dict,
     model: str,
     messages: list[dict],
     temperature: float,
     max_tokens: int | None,
     vision: bool,
+    role: str,
 ) -> str:
     import dashscope
 
@@ -231,6 +234,13 @@ def _call_dashscope(
 
         ds_messages = [_to_dashscope_msg(m) for m in messages]
         kwargs: dict[str, Any] = dict(model=model, messages=ds_messages, temperature=temperature)
+        _log_model_call(
+            role=role,
+            provider=provider,
+            model=model,
+            api="DashScope MultiModalConversation.call",
+            endpoint="dashscope native multimodal",
+        )
         response = MultiModalConversation.call(**kwargs)
         if response.status_code != 200:
             raise RuntimeError(f"DashScope VL error: code={response.code} message={response.message}")
@@ -241,6 +251,13 @@ def _call_dashscope(
 
     from dashscope import Generation
 
+    _log_model_call(
+        role=role,
+        provider=provider,
+        model=model,
+        api="DashScope Generation.call",
+        endpoint="dashscope native generation",
+    )
     response = Generation.call(
         model=model,
         messages=messages,
@@ -260,23 +277,33 @@ def _call_dashscope(
                 "DashScope Generation.call failed for model=%s with url error; fallback to compatible-mode API.",
                 model,
             )
-            return _call_dashscope_compatible(model, messages, temperature, max_tokens)
+            return _call_dashscope_compatible(provider, model, messages, temperature, max_tokens, role)
         raise RuntimeError(f"DashScope error: code={response.code} message={response.message}")
     return response.output.choices[0].message.content or ""
 
 
 def _call_dashscope_compatible(
+    provider: dict,
     model: str,
     messages: list[dict],
     temperature: float,
     max_tokens: int | None,
+    role: str,
 ) -> str:
     """Call DashScope via OpenAI-compatible endpoint as fallback."""
     from openai import OpenAI
 
+    endpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     client = OpenAI(
         api_key=settings.dashscope_api_key,
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        base_url=endpoint,
+    )
+    _log_model_call(
+        role=role,
+        provider=provider,
+        model=model,
+        api="OpenAI-compatible chat.completions.create",
+        endpoint=endpoint,
     )
     kwargs: dict[str, Any] = dict(model=model, messages=[_to_openai_msg(m) for m in messages], temperature=temperature)
     if max_tokens:
@@ -319,12 +346,20 @@ def _call_openai(
     messages: list[dict],
     temperature: float,
     max_tokens: int | None,
+    role: str,
 ) -> str:
     from openai import OpenAI
 
     api_key = provider.get("api_key", "") or "missing-key"
     base_url = provider.get("base_url") or None
     client = OpenAI(api_key=api_key, base_url=base_url)
+    _log_model_call(
+        role=role,
+        provider=provider,
+        model=model,
+        api="OpenAI-compatible chat.completions.create",
+        endpoint=base_url or "https://api.openai.com/v1",
+    )
 
     norm_messages = [_to_openai_msg(m) for m in messages]
     kwargs: dict[str, Any] = dict(model=model, messages=norm_messages, temperature=temperature)
@@ -365,6 +400,7 @@ def _call_anthropic(
     messages: list[dict],
     temperature: float,
     max_tokens: int | None,
+    role: str,
 ) -> str:
     import anthropic
 
@@ -373,6 +409,13 @@ def _call_anthropic(
     if base_url:
         kwargs["base_url"] = base_url
     client = anthropic.Anthropic(**kwargs)
+    _log_model_call(
+        role=role,
+        provider=provider,
+        model=model,
+        api="Anthropic messages.create",
+        endpoint=base_url or "https://api.anthropic.com",
+    )
 
     system_text = ""
     user_msgs: list[dict] = []
@@ -450,6 +493,18 @@ def _url_to_anthropic_image(url: str) -> dict:
 
 
 # ── Utilities ────────────────────────────────────────────────────
+
+def _log_model_call(role: str, provider: dict, model: str, api: str, endpoint: str) -> None:
+    """Emit an immediate, key-free model call line for Docker logs."""
+    provider_name = provider.get("name") or provider.get("id") or "unknown"
+    provider_type = provider.get("type", "unknown")
+    message = (
+        f"[ModelCall] role={role} provider={provider_name} "
+        f"type={provider_type} model={model} api={api} endpoint={endpoint}"
+    )
+    print(message, flush=True)
+    logger.info(message)
+
 
 def _has_image(messages: list[dict]) -> bool:
     for m in messages:

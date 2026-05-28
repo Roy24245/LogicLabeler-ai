@@ -16,7 +16,7 @@ import TipsAndUpdatesRoundedIcon from '@mui/icons-material/TipsAndUpdatesRounded
 import {
   getDatasets, runLabeling, getLabelingStatus,
   runReview, getReviewStatus, applyReviewFixes,
-  type Dataset, type CurrentImagePreview,
+  getSettings, type Dataset, type CurrentImagePreview,
 } from '../api/client'
 import { useStore } from '../store/useStore'
 import PromptOptimizerDialog from '../components/PromptOptimizerDialog'
@@ -41,6 +41,7 @@ export default function AutoLabel() {
   const [selectedDs, setSelectedDs] = useState<number>(0)
   const [instruction, setInstruction] = useState('')
   const [soldierMode, setSoldierMode] = useState('qwen_vision')
+  const [soldierModelLabel, setSoldierModelLabel] = useState('')
   const [useSahi, setUseSahi] = useState(false)
   const [useRag, setUseRag] = useState(true)
   const [running, setRunning] = useState(false)
@@ -72,7 +73,17 @@ export default function AutoLabel() {
     setOptimizeOpen(true)
   }
 
-  useEffect(() => { (async () => { try { const [ds] = await Promise.all([getDatasets()]); setDatasets(ds.data) } catch {} })() }, [])
+  useEffect(() => {
+    (async () => {
+      try {
+        const [ds, s] = await Promise.all([getDatasets(), getSettings()])
+        setDatasets(ds.data)
+        if (s.data.soldier_mode) setSoldierMode(s.data.soldier_mode)
+        const m = s.data.active_soldier_model || s.data.active_vision_model
+        if (m?.model) setSoldierModelLabel(m.model)
+      } catch {}
+    })()
+  }, [])
 
   const classColors = useMemo(() => {
     if (!previewImage) return {}
@@ -265,10 +276,15 @@ export default function AutoLabel() {
               <FormControl fullWidth>
                 <InputLabel>Soldier 模式</InputLabel>
                 <Select label="Soldier 模式" value={soldierMode} onChange={(e) => setSoldierMode(e.target.value)}>
-                  <MenuItem value="qwen_vision">Qwen3.5-Plus Vision (API)</MenuItem>
+                  <MenuItem value="qwen_vision">視覺 API（使用系統設定的 Soldier 模型）</MenuItem>
                   <MenuItem value="grounded_sam">Grounded-SAM (本地)</MenuItem>
                 </Select>
               </FormControl>
+              {soldierMode === 'qwen_vision' && soldierModelLabel && (
+                <Typography variant="caption" color="text.secondary">
+                  當前 Soldier 模型：{soldierModelLabel}
+                </Typography>
+              )}
               <Box>
                 <FormControlLabel control={<Switch checked={useSahi} onChange={(e) => setUseSahi(e.target.checked)} />} label="SAHI 切片推理" />
                 <FormControlLabel control={<Switch checked={useRag} onChange={(e) => setUseRag(e.target.checked)} />} label="RAG 檢索增強" />
