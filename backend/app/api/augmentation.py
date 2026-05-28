@@ -14,6 +14,7 @@ from app.models import Annotation, Dataset, Image
 from app.services import augmentation as aug_svc
 from app.services import commander, soldier, critic, rag_service
 from app.services import dataset_service as ds_svc
+from app.services import model_providers as mp
 
 router = APIRouter(tags=["augmentation"])
 logger = logging.getLogger(__name__)
@@ -123,7 +124,14 @@ def _auto_label_images(job_id: int, dataset_id: int, image_ids: list[int], instr
     job = _aug_jobs[job_id]
     job["status"] = "labeling"
 
+    mp.reload_active_models()
+    commander_model = mp.describe_active_model("text")
+    soldier_model = mp.describe_active_model("soldier")
+    critic_model = mp.describe_active_model("vision")
     _job_log(job_id, "\n=== 自動標註階段開始 ===")
+    _job_log(job_id, f"[Model] Commander: {commander_model['provider_name']} / {commander_model['model']}")
+    _job_log(job_id, f"[Model] Soldier: {soldier_model['provider_name']} / {soldier_model['model']}")
+    _job_log(job_id, f"[Model] Critic/Reviewer: {critic_model['provider_name']} / {critic_model['model']}")
 
     db = SessionLocal()
     try:
@@ -152,6 +160,7 @@ def _auto_label_images(job_id: int, dataset_id: int, image_ids: list[int], instr
             _job_log(job_id, f"[Commander] open_vocabulary=ON, 範例品種={plan_examples}")
 
         mode = settings.soldier_mode
+        _job_log(job_id, f"[Soldier] 模式: {mode}")
         labeled_count = 0
         total_anns = 0
 
@@ -160,7 +169,10 @@ def _auto_label_images(job_id: int, dataset_id: int, image_ids: list[int], instr
             if not img:
                 continue
 
-            _job_log(job_id, f"\n[Soldier] ({idx + 1}/{len(image_ids)}) 標註 {img.filename}")
+            _job_log(
+                job_id,
+                f"\n[Soldier] ({idx + 1}/{len(image_ids)}) 使用 {soldier_model['model']} 標註 {img.filename}",
+            )
 
             try:
                 detections = soldier.detect_objects(

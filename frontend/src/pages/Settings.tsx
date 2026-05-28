@@ -298,9 +298,9 @@ export default function Settings() {
                   </FormControl>
 
                   <FormControl fullWidth size="small">
-                    <InputLabel>視覺模型 (Soldier/Critic)</InputLabel>
+                    <InputLabel>視覺模型 (Critic/Reviewer)</InputLabel>
                     <Select
-                      label="視覺模型 (Soldier/Critic)"
+                      label="視覺模型 (Critic/Reviewer)"
                       value={`${visionModel.provider_id}::${visionModel.model}`}
                       onChange={(e) => {
                         const [pid, m] = String(e.target.value).split('::')

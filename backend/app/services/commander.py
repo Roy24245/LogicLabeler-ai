@@ -1,4 +1,4 @@
-"""Commander Agent — Qwen3.5-Plus via DashScope.
+"""Commander Agent — text model via configured provider.
 
 Responsible for semantic understanding, Chain-of-Thought reasoning, and
 task decomposition. Converts natural language labeling instructions into

@@ -267,6 +267,7 @@ export default function AnnotatorDialog(p: Props) {
         classes: p.dataset.label_classes || undefined,
       })
       if (data.success && data.detections.length > 0) {
+        const modelText = data.model?.model ? `（${data.model.model}）` : ''
         const newAnns: LocalAnn[] = data.detections.map(d => ({
           id: -Date.now() - Math.random(),
           class_name: d.class_name,
@@ -282,9 +283,10 @@ export default function AnnotatorDialog(p: Props) {
           note: null,
         }))
         setAnnotations(prev => [...prev, ...newAnns], true)
-        p.onSnackbar(`已新增 ${newAnns.length} 個標註`, 'success')
+        p.onSnackbar(`已新增 ${newAnns.length} 個標註${modelText}`, 'success')
       } else {
-        p.onSnackbar('AI 未檢測到任何目標', 'info')
+        const modelText = data.model?.model ? `（${data.model.model}）` : ''
+        p.onSnackbar(`AI 未檢測到任何目標${modelText}`, 'info')
       }
     } catch (e: any) {
       p.onSnackbar(e?.response?.data?.detail || '自動標註失敗', 'error')

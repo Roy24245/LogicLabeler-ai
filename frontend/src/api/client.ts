@@ -217,6 +217,13 @@ export const assistSegment = (data: { image_id: number; type: 'click' | 'bbox'; 
 export interface AutoLabelResult {
   success: boolean
   detections: { class_name: string; bbox: BBox; confidence: number }[]
+  model?: {
+    role: string
+    provider_id: string
+    provider_name: string
+    provider_type: string
+    model: string
+  }
 }
 export const assistAutolabelImage = (data: { image_id: number; classes?: string[]; instruction?: string; mode?: string }) =>
   api.post<AutoLabelResult>('/assist/autolabel-image', data)

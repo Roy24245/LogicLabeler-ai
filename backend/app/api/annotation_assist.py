@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Dataset, Image
 from app.services import commander, segment_assist, soldier
+from app.services import model_providers as mp
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,8 @@ def assist_autolabel_image(body: AutoLabelRequest, db: Session = Depends(get_db)
         )
 
     try:
+        mp.reload_active_models()
+        soldier_model = mp.describe_active_model("soldier")
         detections = soldier.detect_objects(
             image_path=img.filepath,
             targets=targets,
@@ -110,6 +113,7 @@ def assist_autolabel_image(body: AutoLabelRequest, db: Session = Depends(get_db)
     return {
         "success": True,
         "detections": detections,
+        "model": soldier_model,
         "open_vocabulary": open_vocabulary,
         "targets": targets,
         "examples": examples,

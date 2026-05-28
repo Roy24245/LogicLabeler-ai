@@ -244,15 +244,34 @@ def _run_pipeline(job_id: int, request: LabelingRequest):
     """Execute the full Commander -> Soldier -> Critic -> RAG pipeline."""
     db = SessionLocal()
     try:
+        mp.reload_active_models()
         job = db.query(LabelingJob).filter(LabelingJob.id == job_id).first()
         if not job:
             return
 
         _log(job_id, "=== LogicLabeler Auto-Labeling Pipeline ===")
         _log(job_id, f"Instruction: {request.instruction}")
+        commander_model = mp.describe_active_model("text")
+        soldier_model = mp.describe_active_model("soldier")
+        critic_model = mp.describe_active_model("vision")
+        _log(
+            job_id,
+            "[Model] Commander: "
+            f"{commander_model['provider_name']} / {commander_model['model']}",
+        )
+        _log(
+            job_id,
+            "[Model] Soldier: "
+            f"{soldier_model['provider_name']} / {soldier_model['model']}",
+        )
+        _log(
+            job_id,
+            "[Model] Critic/Reviewer: "
+            f"{critic_model['provider_name']} / {critic_model['model']}",
+        )
 
         # Step 1: Commander — parse instruction
-        _log(job_id, "[Commander] Parsing instruction with Qwen3.5-Plus...")
+        _log(job_id, f"[Commander] Parsing instruction with {commander_model['model']}...")
         rag_context = ""
         if request.use_rag:
             rag_context = rag_service.retrieve_context(query_text=request.instruction)
@@ -267,9 +286,14 @@ def _run_pipeline(job_id: int, request: LabelingRequest):
         # Step 2 & 3: Soldier + Critic for each image
         images = db.query(Image).filter(Image.dataset_id == request.dataset_id).all()
         mode = request.soldier_mode or settings.soldier_mode
+        _log(job_id, f"[Soldier] Mode: {mode}")
 
         for idx, img in enumerate(images):
-            _log(job_id, f"\n[Soldier] Processing image {idx + 1}/{len(images)}: {img.filename}")
+            _log(
+                job_id,
+                f"\n[Soldier] Processing image {idx + 1}/{len(images)} "
+                f"with {soldier_model['model']}: {img.filename}",
+            )
 
             plan_examples = plan.get("examples", {}) or {}
             plan_open_vocab = bool(plan.get("open_vocabulary", False))

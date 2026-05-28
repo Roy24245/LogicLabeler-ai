@@ -66,6 +66,17 @@ export default function AutoLabel() {
   const [optimizeOpen, setOptimizeOpen] = useState(false)
   const [optimizeBaseline, setOptimizeBaseline] = useState('')
 
+  const refreshModelSettings = useCallback(async () => {
+    const { data } = await getSettings()
+    if (data.soldier_mode) setSoldierMode(data.soldier_mode)
+    const m = data.active_soldier_model || data.active_vision_model
+    if (m?.model) setSoldierModelLabel(m.model)
+    return {
+      soldierMode: data.soldier_mode || 'qwen_vision',
+      soldierModel: m?.model || '',
+    }
+  }, [])
+
   const handleOpenOptimize = () => {
     const trimmed = instruction.trim()
     if (!trimmed) { showSnackbar('請先輸入標註指令', 'error'); return }
@@ -76,14 +87,12 @@ export default function AutoLabel() {
   useEffect(() => {
     (async () => {
       try {
-        const [ds, s] = await Promise.all([getDatasets(), getSettings()])
+        const [ds] = await Promise.all([getDatasets()])
         setDatasets(ds.data)
-        if (s.data.soldier_mode) setSoldierMode(s.data.soldier_mode)
-        const m = s.data.active_soldier_model || s.data.active_vision_model
-        if (m?.model) setSoldierModelLabel(m.model)
+        await refreshModelSettings()
       } catch {}
     })()
-  }, [])
+  }, [refreshModelSettings])
 
   const classColors = useMemo(() => {
     if (!previewImage) return {}
@@ -182,7 +191,19 @@ export default function AutoLabel() {
     if (!selectedDs || !instruction.trim()) { showSnackbar('請選擇數據集並輸入標註指令', 'error'); return }
     setRunning(true); setLogs([]); setPreviewImage(null)
     try {
-      const { data } = await runLabeling({ dataset_id: selectedDs, instruction: instruction.trim(), soldier_mode: soldierMode, use_sahi: useSahi, use_rag: useRag })
+      const latest = await refreshModelSettings()
+      setLogs([
+        `準備啟動自動標註`,
+        `Soldier 模式：${latest.soldierMode}`,
+        latest.soldierModel ? `Soldier 模型：${latest.soldierModel}` : 'Soldier 模型：未取得',
+      ])
+      const { data } = await runLabeling({
+        dataset_id: selectedDs,
+        instruction: instruction.trim(),
+        soldier_mode: latest.soldierMode,
+        use_sahi: useSahi,
+        use_rag: useRag,
+      })
       setProgress({ total: data.total_images, processed: 0, status: 'running' })
       pollRef.current = setInterval(async () => {
         try {

@@ -1,6 +1,6 @@
 """Critic Agent — Quality control and adversarial validation.
 
-Uses Qwen3.5-Plus Vision to verify detections by cropping candidate regions
+Uses the configured vision model to verify detections by cropping candidate regions
 and performing secondary semantic checks. Also runs geometric logic validation.
 """
 from __future__ import annotations

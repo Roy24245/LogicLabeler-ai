@@ -74,7 +74,7 @@ def reload_active_models() -> None:
     global _active_text_model, _active_vision_model, _active_soldier_model
     _active_text_model = _read_setting("active_text_model", DEFAULT_TEXT_MODEL) or DEFAULT_TEXT_MODEL
     _active_vision_model = _read_setting("active_vision_model", DEFAULT_VISION_MODEL) or DEFAULT_VISION_MODEL
-    _active_soldier_model = _read_setting("active_soldier_model", DEFAULT_VISION_MODEL) or DEFAULT_VISION_MODEL
+    _active_soldier_model = _read_setting("active_soldier_model", _active_vision_model) or _active_vision_model
 
 
 def list_providers(unmasked: bool = False) -> list[dict]:
@@ -141,6 +141,27 @@ def get_active_vision_model() -> dict:
 
 def get_active_soldier_model() -> dict:
     return dict(_active_soldier_model)
+
+
+def describe_active_model(role: str) -> dict:
+    """Return resolved provider/model metadata for display and job logs."""
+    if role == "text":
+        active = get_active_text_model()
+    elif role == "soldier":
+        active = get_active_soldier_model()
+    else:
+        active = get_active_vision_model()
+
+    provider = get_provider(active.get("provider_id")) or get_provider(BUILTIN_DASHSCOPE_ID) or {}
+    return {
+        "role": role,
+        "provider_id": provider.get("id", active.get("provider_id", "")),
+        "provider_name": provider.get("name", active.get("provider_id", "unknown")),
+        "provider_type": provider.get("type", "unknown"),
+        "model": active.get("model") or (
+            DEFAULT_TEXT_MODEL["model"] if role == "text" else DEFAULT_VISION_MODEL["model"]
+        ),
+    }
 
 
 # ── Public dispatch APIs ──────────────────────────────────────────
