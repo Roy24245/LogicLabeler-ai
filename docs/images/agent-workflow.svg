@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-labelledby="title desc">
+  <title id="title">LogicLabeler multi-agent workflow</title>
+  <desc id="desc">A natural-language instruction moves through Commander, Soldier, Critic, and Reviewer, with human corrections stored in RAG memory.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FAF8FC"/>
+      <stop offset="1" stop-color="#F4EFF6"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7B61B7"/>
+      <stop offset="1" stop-color="#4F378B"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#381E72" flood-opacity=".10"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5 0 10Z" fill="#6750A4"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5 0 10Z" fill="#1B8755"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="720" rx="36" fill="url(#bg)"/>
+  <text x="80" y="76" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="36" font-weight="750" letter-spacing="-1">From intent to trusted labels</text>
+  <text x="80" y="112" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">Every stage has one job—and every correction makes the next run better.</text>
+
+  <g transform="translate(78 176)">
+    <rect width="192" height="86" rx="22" fill="#fff" stroke="#D8CFE3"/>
+    <circle cx="42" cy="43" r="22" fill="#EADDFF"/>
+    <path d="M33 43h18M42 34v18" stroke="#6750A4" stroke-width="4" stroke-linecap="round"/>
+    <text x="76" y="36" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="700">Natural language</text>
+    <text x="76" y="59" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">instruction</text>
+  </g>
+
+  <path d="M286 219H334" stroke="#6750A4" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <g transform="translate(348 154)" filter="url(#shadow)">
+    <rect width="244" height="196" rx="28" fill="#fff" stroke="#D8CFE3"/>
+    <circle cx="42" cy="42" r="25" fill="#EADDFF"/>
+    <path d="M31 43h22M36 34l-5 9 5 9M48 34l5 9-5 9" fill="none" stroke="#6750A4" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="78" y="39" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="750">Commander</text>
+    <text x="78" y="62" fill="#6750A4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".7">PLAN</text>
+    <line x1="24" y1="84" x2="220" y2="84" stroke="#EEE8F1"/>
+    <text x="24" y="116" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Parse semantics</text>
+    <text x="24" y="142" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Resolve open vocabulary</text>
+    <rect x="24" y="160" width="133" height="24" rx="12" fill="#F3EDFA"/>
+    <text x="90" y="177" text-anchor="middle" fill="#6750A4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">Structured JSON</text>
+  </g>
+
+  <path d="M608 252H654" stroke="#6750A4" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <g transform="translate(668 154)" filter="url(#shadow)">
+    <rect width="244" height="196" rx="28" fill="#fff" stroke="#C8DCEC"/>
+    <circle cx="42" cy="42" r="25" fill="#D1E4FF"/>
+    <path d="M29 31h26v22H29zM33 49l7-8 5 5 4-4 6 7" fill="none" stroke="#0061A4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="78" y="39" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="750">Soldier</text>
+    <text x="78" y="62" fill="#0061A4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".7">GROUND</text>
+    <line x1="24" y1="84" x2="220" y2="84" stroke="#E5EDF3"/>
+    <text x="24" y="116" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Detect and localize</text>
+    <text x="24" y="142" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">VLM or Grounded-SAM</text>
+    <rect x="24" y="160" width="116" height="24" rx="12" fill="#EAF4FF"/>
+    <text x="82" y="177" text-anchor="middle" fill="#0061A4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">SAHI ready</text>
+  </g>
+
+  <path d="M928 252H974" stroke="#6750A4" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <g transform="translate(988 154)" filter="url(#shadow)">
+    <rect width="244" height="196" rx="28" fill="#fff" stroke="#E7D6B8"/>
+    <circle cx="42" cy="42" r="25" fill="#FFF1D6"/>
+    <path d="M31 43l7 7 15-17" fill="none" stroke="#B26B00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="78" y="39" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="750">Critic</text>
+    <text x="78" y="62" fill="#9A5D00" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".7">CHALLENGE</text>
+    <line x1="24" y1="84" x2="220" y2="84" stroke="#F1E9DC"/>
+    <text x="24" y="116" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Check spatial logic</text>
+    <text x="24" y="142" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Debate low confidence</text>
+    <rect x="24" y="160" width="104" height="24" rx="12" fill="#FFF5E3"/>
+    <text x="76" y="177" text-anchor="middle" fill="#9A5D00" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">IoU + VLM</text>
+  </g>
+
+  <path d="M1248 252H1294" stroke="#6750A4" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <g transform="translate(1308 154)" filter="url(#shadow)">
+    <rect width="214" height="196" rx="28" fill="#fff" stroke="#CBE5D5"/>
+    <circle cx="42" cy="42" r="25" fill="#D8F0E1"/>
+    <path d="M30 42l8 8 17-18M31 58h24" fill="none" stroke="#1B8755" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="78" y="39" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="750">Reviewer</text>
+    <text x="78" y="62" fill="#1B8755" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".7">VERIFY</text>
+    <line x1="24" y1="84" x2="190" y2="84" stroke="#E4F0E8"/>
+    <text x="24" y="116" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Inspect crops</text>
+    <text x="24" y="142" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Approve or adjust</text>
+    <rect x="24" y="160" width="130" height="24" rx="12" fill="#EAF7EF"/>
+    <text x="89" y="177" text-anchor="middle" fill="#1B8755" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">Trusted labels</text>
+  </g>
+
+  <g transform="translate(78 452)">
+    <rect width="1444" height="184" rx="30" fill="#fff" stroke="#D8CFE3"/>
+    <text x="34" y="42" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="1">CONTINUOUS LEARNING LOOP</text>
+
+    <g transform="translate(42 72)">
+      <rect width="238" height="76" rx="20" fill="#F8F4FA" stroke="#DED5E4"/>
+      <circle cx="38" cy="38" r="20" fill="#E8DEF8"/>
+      <path d="M30 39l6 6 11-14" fill="none" stroke="#6750A4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="70" y="32" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">Human correction</text>
+      <text x="70" y="54" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Fix once</text>
+    </g>
+
+    <path d="M302 110H420" stroke="#1B8755" stroke-width="4" marker-end="url(#arrowGreen)"/>
+
+    <g transform="translate(438 72)">
+      <rect width="260" height="76" rx="20" fill="#EAF7EF" stroke="#BFDCCB"/>
+      <g transform="translate(20 18)" fill="none" stroke="#1B8755" stroke-width="3">
+        <ellipse cx="20" cy="8" rx="18" ry="7"/><path d="M2 8v12c0 4 8 7 18 7s18-3 18-7V8M2 20v12c0 4 8 7 18 7s18-3 18-7V20"/>
+      </g>
+      <text x="76" y="32" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">RAG memory</text>
+      <text x="76" y="54" fill="#496154" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Embed the lesson</text>
+    </g>
+
+    <path d="M720 110H838" stroke="#1B8755" stroke-width="4" marker-end="url(#arrowGreen)"/>
+
+    <g transform="translate(856 72)">
+      <rect width="280" height="76" rx="20" fill="#F3EDFA" stroke="#D8CFE3"/>
+      <circle cx="38" cy="38" r="20" fill="#EADDFF"/>
+      <path d="M28 42c6-12 13-12 20 0M29 33h18" fill="none" stroke="#6750A4" stroke-width="3" stroke-linecap="round"/>
+      <text x="72" y="32" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">Similar future task</text>
+      <text x="72" y="54" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Retrieve negative examples</text>
+    </g>
+
+    <path d="M1158 110H1276" stroke="#1B8755" stroke-width="4" marker-end="url(#arrowGreen)"/>
+
+    <g transform="translate(1294 72)">
+      <rect width="114" height="76" rx="20" fill="#1B8755"/>
+      <text x="57" y="33" text-anchor="middle" fill="#fff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="750">Better</text>
+      <text x="57" y="54" text-anchor="middle" fill="#D8F0E1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">next run</text>
+    </g>
+  </g>
+</svg>
