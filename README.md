@@ -43,10 +43,11 @@
 
 ## Recognition
 
-> [!IMPORTANT]
-> 🏆 **Champion & Most Popular Award — Computer Science and Information Technology**<br />
-> First “Youth Science and Technology Village” Scientific Innovation Talent Training Program Achievement Exhibition · Macao · 2026<br />
-> [View the official award list published by the Macao Science Center](https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf)
+<a href="https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf">
+  <img src="./docs/images/award-banner-2026.png" alt="LogicLabeler — 2026 Champion and Most Popular Award in Computer Science and Information Technology" width="100%" />
+</a>
+
+<p align="center"><sub>First “Youth Science and Technology Village” Scientific Innovation Talent Training Program Achievement Exhibition · <a href="https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf">Official award list</a></sub></p>
 
 ---
 

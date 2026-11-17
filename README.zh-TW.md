@@ -43,10 +43,11 @@
 
 ## 獎項肯定
 
-> [!IMPORTANT]
-> 🏆 **電腦及科技網絡類：冠軍及最受公眾歡迎獎**<br />
-> 第一屆「青年科技村」科創人才培訓計劃成果展 · 澳門 · 2026<br />
-> [查看澳門科學館公布的官方得獎名單](https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf)
+<a href="https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf">
+  <img src="./docs/images/award-banner-2026.png" alt="LogicLabeler——2026 電腦及科技網絡類冠軍及最受公眾歡迎獎" width="100%" />
+</a>
+
+<p align="center"><sub>第一屆「青年科技村」科創人才培訓計劃成果展 · <a href="https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf">官方得獎名單</a></sub></p>
 
 ---
 
