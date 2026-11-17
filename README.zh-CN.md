@@ -23,10 +23,11 @@
 <img src="https://img.shields.io/badge/YOLO-v8%2Fv11-00FFFF?style=for-the-badge&logo=yolo&logoColor=white" alt="YOLO v8/v11" />
 <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Compose" />
 <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License" />
+<a href="https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf"><img src="https://img.shields.io/badge/2026_冠军-%26_最受公众欢迎奖-F4B942?style=for-the-badge" alt="2026 冠军及最受公众欢迎奖" /></a>
 
 <br /><br />
 
-[为什么选择 LogicLabeler？](#为什么选择-logiclabeler) · [标注流程](#多智能体标注流程) · [产品预览](#产品预览) · [快速开始](#快速开始) · [系统架构](#架构)
+[获奖荣誉](#获奖荣誉) · [为什么选择 LogicLabeler？](#为什么选择-logiclabeler) · [标注流程](#多智能体标注流程) · [产品预览](#产品预览) · [快速开始](#快速开始) · [系统架构](#架构)
 
 <br /><br />
 
@@ -37,6 +38,15 @@
 | “标记每辆**车辆**” | “标记停在**限制区域内的车辆**” |
 
 </div>
+
+---
+
+## 获奖荣誉
+
+> [!IMPORTANT]
+> 🏆 **电脑及科技网络类：冠军及最受公众欢迎奖**<br />
+> 第一届“青年科技村”科创人才培训计划成果展 · 澳门 · 2026<br />
+> [查看澳门科学馆公布的官方获奖名单](https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf)
 
 ---
 

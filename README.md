@@ -23,10 +23,11 @@
 <img src="https://img.shields.io/badge/YOLO-v8%2Fv11-00FFFF?style=for-the-badge&logo=yolo&logoColor=white" alt="YOLO v8/v11" />
 <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Compose" />
 <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License" />
+<a href="https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf"><img src="https://img.shields.io/badge/2026_Champion-%26_Most_Popular_Award-F4B942?style=for-the-badge" alt="2026 Champion and Most Popular Award" /></a>
 
 <br /><br />
 
-[Why LogicLabeler?](#why-logiclabeler) · [Workflow](#multi-agent-annotation-pipeline) · [Product preview](#product-preview) · [Quick start](#quick-start) · [Architecture](#architecture)
+[Recognition](#recognition) · [Why LogicLabeler?](#why-logiclabeler) · [Workflow](#multi-agent-annotation-pipeline) · [Product preview](#product-preview) · [Quick start](#quick-start) · [Architecture](#architecture)
 
 <br /><br />
 
@@ -37,6 +38,15 @@
 | “Label every **vehicle**” | “Label vehicles **parked in a restricted zone**” |
 
 </div>
+
+---
+
+## Recognition
+
+> [!IMPORTANT]
+> 🏆 **Champion & Most Popular Award — Computer Science and Information Technology**<br />
+> First “Youth Science and Technology Village” Scientific Innovation Talent Training Program Achievement Exhibition · Macao · 2026<br />
+> [View the official award list published by the Macao Science Center](https://www.msc.org.mo/attachment/files/2026/06/18/第一屆“青年科技村科創人才培訓計劃”成果展得獎名單.pdf)
 
 ---
 
