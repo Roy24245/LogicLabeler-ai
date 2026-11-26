@@ -1,112 +1,93 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
-  <title id="title">LogicLabeler system architecture</title>
-  <desc id="desc">The React interface connects through REST and WebSocket to a FastAPI backend, multi-agent pipeline, model providers, data services, training, and storage.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100" role="img" aria-labelledby="title desc">
+  <title id="title">LogicLabeler implementation architecture</title>
+  <desc id="desc">React, TypeScript, MUI and Zustand communicate through Nginx or Vite with FastAPI. REST serves operations and polling, static routes serve assets, and WebSocket streams training logs. Labeling uses threads, training uses subprocesses, and model adapters call configured providers. SQLite stores metadata, the filesystem holds images and training artifacts, and optional ChromaDB supplies text context.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#15131A"/>
-      <stop offset="1" stop-color="#211A31"/>
-    </linearGradient>
-    <linearGradient id="primary" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7B61B7"/>
-      <stop offset="1" stop-color="#4F378B"/>
-    </linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000" flood-opacity=".24"/>
-    </filter>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
-      <path d="M0 0L10 5 0 10Z" fill="#D0BCFF"/>
-    </marker>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#15121E"/><stop offset="1" stop-color="#292038"/></linearGradient>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse"><path d="M64 0H0V64" fill="none" stroke="#A692C5" stroke-opacity=".06"/></pattern>
+    <clipPath id="clip"><rect width="1600" height="1100" rx="32"/></clipPath>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8" fill="#BDA6E9"/></marker>
+    <style>
+      text{font-family:Inter,"Segoe UI",Arial,sans-serif}
+      .title{font-size:40px;font-weight:700;fill:#FAF7FF;letter-spacing:-1px}
+      .subtitle{font-size:23px;fill:#C3B9CF}
+      .eyebrow{font-size:17px;font-weight:700;fill:#BDA6E9;letter-spacing:2px}
+      .name{font-size:27px;font-weight:700;fill:#FAF7FF}
+      .body{font-size:22px;fill:#D4CCDF}
+      .small{font-size:20px;fill:#AEA2BF}
+      .line{fill:none;stroke:#BDA6E9;stroke-width:3;marker-end:url(#arrow)}
+    </style>
   </defs>
-
-  <rect width="1600" height="900" rx="36" fill="url(#bg)"/>
-  <text x="78" y="66" fill="#F4EFF6" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="35" font-weight="750">System architecture</text>
-  <text x="78" y="100" fill="#CAC4D0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17">One interface, pluggable intelligence, and a local-first data plane.</text>
-
-  <g transform="translate(78 138)" filter="url(#shadow)">
-    <rect width="1444" height="104" rx="26" fill="#26232C" stroke="#5F5668"/>
-    <rect x="22" y="22" width="214" height="60" rx="18" fill="url(#primary)"/>
-    <text x="129" y="49" text-anchor="middle" fill="#fff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="750">React 18 + MUI v6</text>
-    <text x="129" y="69" text-anchor="middle" fill="#EADDFF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">Material Design 3</text>
-
-    <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="650" fill="#E6E0E9">
-      <rect x="266" y="30" width="142" height="44" rx="14" fill="#34303A"/><text x="337" y="58" text-anchor="middle">Dashboard</text>
-      <rect x="422" y="30" width="142" height="44" rx="14" fill="#34303A"/><text x="493" y="58" text-anchor="middle">Datasets</text>
-      <rect x="578" y="30" width="142" height="44" rx="14" fill="#34303A"/><text x="649" y="58" text-anchor="middle">Annotator</text>
-      <rect x="734" y="30" width="142" height="44" rx="14" fill="#34303A"/><text x="805" y="58" text-anchor="middle">AI labeling</text>
-      <rect x="890" y="30" width="142" height="44" rx="14" fill="#34303A"/><text x="961" y="58" text-anchor="middle">Training</text>
-      <rect x="1046" y="30" width="142" height="44" rx="14" fill="#34303A"/><text x="1117" y="58" text-anchor="middle">Augmentation</text>
-      <rect x="1202" y="30" width="218" height="44" rx="14" fill="#34303A"/><text x="1311" y="58" text-anchor="middle">Settings + providers</text>
+  <g clip-path="url(#clip)">
+    <rect width="1600" height="1100" fill="url(#bg)"/>
+    <rect width="1600" height="1100" fill="url(#grid)"/>
+    <circle cx="1570" cy="20" r="300" fill="#8D6BBA" opacity=".08"/>
+  </g>
+  <text x="64" y="63" class="eyebrow">LOGICLABELER / SYSTEM MAP</text>
+  <text x="64" y="120" class="title">One workspace, three implementation layers</text>
+  <text x="64" y="160" class="subtitle">Browser interaction → API orchestration → models and persistent data</text>
+  <g transform="translate(64 202)">
+    <rect width="1472" height="124" rx="24" fill="#30263E" stroke="#73598D"/>
+    <text x="28" y="44" class="name">React 18 + TypeScript</text>
+    <text x="28" y="82" class="body">MUI 6 · Zustand · Axios</text>
+    <path d="M420 28V96" stroke="#625171"/>
+    <text x="458" y="44" class="body">Datasets · Annotation canvas · AI labeling · Review</text>
+    <text x="458" y="82" class="body">Augmentation · Training dashboard · Provider settings</text>
+  </g>
+  <path d="M800 328V361" class="line"/>
+  <rect x="64" y="378" width="1472" height="100" rx="22" fill="#211D2A" stroke="#5A4B68"/>
+  <text x="91" y="417" class="name">Nginx / Vite proxy</text>
+  <text x="91" y="450" class="small">Docker / development</text>
+  <text x="470" y="417" class="body">/api — REST + progress polling</text>
+  <text x="470" y="450" class="body">/static — images + model files</text>
+  <text x="1070" y="417" class="body">/ws/logs/{job_id}</text>
+  <text x="1070" y="450" class="small">Training log stream only</text>
+  <path d="M800 480V513" class="line"/>
+  <g transform="translate(64 530)">
+    <rect width="1472" height="290" rx="24" fill="#211B2B" stroke="#806398"/>
+    <text x="28" y="45" class="name">FastAPI + SQLAlchemy</text>
+    <text x="460" y="44" class="small">REST routes · job state · runtime settings · static files</text>
+    <g transform="translate(24 74)">
+      <rect width="450" height="190" rx="18" fill="#30263F"/>
+      <text x="24" y="38" class="eyebrow">ANNOTATION SERVICES</text>
+      <text x="24" y="80" class="body">Commander → Soldier → Critic</text>
+      <text x="24" y="116" class="body">Separate Reviewer / GrabCut</text>
+      <text x="24" y="153" class="small">Batch jobs: background threads</text>
+    </g>
+    <g transform="translate(511 74)">
+      <rect width="450" height="190" rx="18" fill="#30263F"/>
+      <text x="24" y="38" class="eyebrow">MODELS + ADAPTERS</text>
+      <text x="24" y="80" class="body">Text · Soldier · Vision roles</text>
+      <text x="24" y="116" class="body">DashScope · OpenAI-compatible</text>
+      <text x="24" y="153" class="body">Anthropic · local DINO option</text>
+    </g>
+    <g transform="translate(998 74)">
+      <rect width="450" height="190" rx="18" fill="#25382F"/>
+      <text x="24" y="38" class="eyebrow" style="fill:#85D6B4">DATA + TRAINING</text>
+      <text x="24" y="80" class="body">Import · edit · split · YOLO export</text>
+      <text x="24" y="116" class="body">DashScope image augmentation</text>
+      <text x="24" y="153" class="small">YOLO: subprocess per training job</text>
     </g>
   </g>
-
-  <path d="M800 252V286" stroke="#D0BCFF" stroke-width="4" marker-end="url(#arrow)"/>
-  <rect x="664" y="260" width="272" height="36" rx="18" fill="#381E72"/>
-  <text x="800" y="284" text-anchor="middle" fill="#EADDFF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".6">REST API + WEBSOCKET</text>
-
-  <g transform="translate(78 304)" filter="url(#shadow)">
-    <rect width="1444" height="344" rx="30" fill="#211F26" stroke="#5F5668"/>
-    <g transform="translate(22 22)">
-      <rect width="1400" height="58" rx="18" fill="#302B38"/>
-      <rect width="254" height="58" rx="18" fill="url(#primary)"/>
-      <text x="127" y="37" text-anchor="middle" fill="#fff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="750">FastAPI backend</text>
-      <text x="280" y="36" fill="#CAC4D0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">Typed routes · background jobs · WebSocket logs · runtime settings</text>
-    </g>
-
-    <g transform="translate(22 98)">
-      <rect width="676" height="222" rx="24" fill="#2A2630" stroke="#6750A4"/>
-      <text x="26" y="38" fill="#D0BCFF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="750" letter-spacing="1">MULTI-AGENT ORCHESTRATION</text>
-      <g transform="translate(24 64)" font-family="Inter,Segoe UI,Arial,sans-serif">
-        <rect width="136" height="74" rx="18" fill="#4F378B"/>
-        <text x="68" y="33" text-anchor="middle" fill="#fff" font-size="16" font-weight="750">Commander</text>
-        <text x="68" y="54" text-anchor="middle" fill="#EADDFF" font-size="12">semantic plan</text>
-        <path d="M146 37h34" stroke="#D0BCFF" stroke-width="3" marker-end="url(#arrow)"/>
-        <rect x="190" width="136" height="74" rx="18" fill="#123F62"/>
-        <text x="258" y="33" text-anchor="middle" fill="#fff" font-size="16" font-weight="750">Soldier</text>
-        <text x="258" y="54" text-anchor="middle" fill="#D1E4FF" font-size="12">visual ground</text>
-        <path d="M336 37h34" stroke="#D0BCFF" stroke-width="3" marker-end="url(#arrow)"/>
-        <rect x="380" width="116" height="74" rx="18" fill="#704500"/>
-        <text x="438" y="33" text-anchor="middle" fill="#fff" font-size="16" font-weight="750">Critic</text>
-        <text x="438" y="54" text-anchor="middle" fill="#FFF1D6" font-size="12">logic check</text>
-        <path d="M506 37h34" stroke="#D0BCFF" stroke-width="3" marker-end="url(#arrow)"/>
-        <rect x="550" width="102" height="74" rx="18" fill="#0F5C39"/>
-        <text x="601" y="33" text-anchor="middle" fill="#fff" font-size="15" font-weight="750">Reviewer</text>
-        <text x="601" y="54" text-anchor="middle" fill="#D8F0E1" font-size="12">final verify</text>
-      </g>
-      <rect x="24" y="158" width="628" height="42" rx="14" fill="#34303A"/>
-      <text x="338" y="184" text-anchor="middle" fill="#CAC4D0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Geometry engine · SAHI slicing · prompt optimizer · RAG retrieval</text>
-    </g>
-
-    <g transform="translate(720 98)">
-      <rect width="336" height="222" rx="24" fill="#2A2630" stroke="#0061A4"/>
-      <text x="24" y="38" fill="#A1C9F7" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="750" letter-spacing="1">MODEL PROVIDERS</text>
-      <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="700">
-        <rect x="24" y="60" width="288" height="42" rx="14" fill="#123F62"/><text x="168" y="87" text-anchor="middle" fill="#D1E4FF">DashScope · Qwen</text>
-        <rect x="24" y="112" width="288" height="42" rx="14" fill="#34303A"/><text x="168" y="139" text-anchor="middle" fill="#E6E0E9">OpenAI-compatible APIs</text>
-        <rect x="24" y="164" width="288" height="42" rx="14" fill="#34303A"/><text x="168" y="191" text-anchor="middle" fill="#E6E0E9">Anthropic Claude</text>
-      </g>
-    </g>
-
-    <g transform="translate(1078 98)">
-      <rect width="344" height="222" rx="24" fill="#2A2630" stroke="#1B8755"/>
-      <text x="24" y="38" fill="#7DD0A1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="750" letter-spacing="1">DATA + TRAINING</text>
-      <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="700">
-        <rect x="24" y="60" width="296" height="42" rx="14" fill="#17472F"/><text x="172" y="87" text-anchor="middle" fill="#D8F0E1">Dataset import / export</text>
-        <rect x="24" y="112" width="296" height="42" rx="14" fill="#34303A"/><text x="172" y="139" text-anchor="middle" fill="#E6E0E9">AI + local augmentation</text>
-        <rect x="24" y="164" width="296" height="42" rx="14" fill="#34303A"/><text x="172" y="191" text-anchor="middle" fill="#E6E0E9">YOLOv8 / YOLO11 engine</text>
-      </g>
-    </g>
+  <path d="M800 822V859" class="line"/>
+  <path d="M800 841H300V859" class="line"/>
+  <path d="M800 841H1300V859" class="line"/>
+  <g transform="translate(64 877)">
+    <rect width="472" height="145" rx="22" fill="#2A2235" stroke="#66527F"/>
+    <text x="28" y="43" class="name">SQLite</text>
+    <text x="28" y="82" class="body">Datasets · annotations · jobs</text>
+    <text x="28" y="115" class="small">Settings and model selections</text>
   </g>
-
-  <path d="M800 658V692" stroke="#D0BCFF" stroke-width="4" marker-end="url(#arrow)"/>
-
-  <g transform="translate(78 708)" filter="url(#shadow)">
-    <rect width="1444" height="130" rx="26" fill="#26232C" stroke="#5F5668"/>
-    <text x="30" y="35" fill="#CAC4D0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="750" letter-spacing="1">LOCAL-FIRST PERSISTENCE</text>
-    <g transform="translate(30 52)" font-family="Inter,Segoe UI,Arial,sans-serif">
-      <rect width="324" height="54" rx="16" fill="#34303A"/><text x="162" y="34" text-anchor="middle" fill="#E6E0E9" font-size="16" font-weight="700">SQLite · metadata</text>
-      <rect x="344" width="324" height="54" rx="16" fill="#34303A"/><text x="506" y="34" text-anchor="middle" fill="#E6E0E9" font-size="16" font-weight="700">ChromaDB · RAG memory</text>
-      <rect x="688" width="324" height="54" rx="16" fill="#34303A"/><text x="850" y="34" text-anchor="middle" fill="#E6E0E9" font-size="16" font-weight="700">File store · images</text>
-      <rect x="1032" width="352" height="54" rx="16" fill="#34303A"/><text x="1208" y="34" text-anchor="middle" fill="#E6E0E9" font-size="16" font-weight="700">Model artifacts · checkpoints</text>
-    </g>
+  <g transform="translate(564 877)">
+    <rect width="472" height="145" rx="22" fill="#2A2235" stroke="#66527F"/>
+    <text x="28" y="43" class="name">Filesystem</text>
+    <text x="28" y="82" class="body">Images · training snapshots</text>
+    <text x="28" y="115" class="small">Logs · plots · checkpoints</text>
   </g>
+  <g transform="translate(1064 877)">
+    <rect width="472" height="145" rx="22" fill="#2A2235" stroke="#66527F" stroke-dasharray="6 5"/>
+    <text x="28" y="43" class="name">ChromaDB</text>
+    <text x="28" y="82" class="body">Optional text error memory</text>
+    <text x="28" y="115" class="small">Retrieved before Commander</text>
+  </g>
+  <text x="64" y="1066" class="small">Source: frontend/src · frontend/nginx.conf · backend/app · docker-compose.yml</text>
 </svg>

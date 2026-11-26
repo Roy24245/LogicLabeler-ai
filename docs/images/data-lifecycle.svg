@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="870" viewBox="0 0 1600 870" role="img" aria-labelledby="title desc">
+  <title id="title">LogicLabeler dataset and training lifecycle</title>
+  <desc id="desc">Upload images or import YOLO, COCO or VOC bounding boxes; annotate and optionally review; split and export a YOLO dataset; explicitly start YOLO training. Separate DashScope augmentation creates new images with optional relabeling. Training produces logs, metrics, plots and weights, without automatic model deployment.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#15121E"/><stop offset="1" stop-color="#292038"/></linearGradient>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse"><path d="M64 0H0V64" fill="none" stroke="#A692C5" stroke-opacity=".06"/></pattern>
+    <clipPath id="clip"><rect width="1600" height="870" rx="32"/></clipPath>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8" fill="#BDA6E9"/></marker>
+    <marker id="green" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8" fill="#78CBA8"/></marker>
+    <style>
+      text{font-family:Inter,"Segoe UI",Arial,sans-serif}
+      .title{font-size:40px;font-weight:700;fill:#FAF7FF;letter-spacing:-1px}
+      .subtitle{font-size:23px;fill:#C3B9CF}
+      .eyebrow{font-size:17px;font-weight:700;fill:#BDA6E9;letter-spacing:2px}
+      .name{font-size:29px;font-weight:700;fill:#FAF7FF}
+      .body{font-size:22px;fill:#D4CCDF}
+      .small{font-size:20px;fill:#AEA2BF}
+      .line{fill:none;stroke:#BDA6E9;stroke-width:3;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <g clip-path="url(#clip)">
+    <rect width="1600" height="870" fill="url(#bg)"/>
+    <rect width="1600" height="870" fill="url(#grid)"/>
+    <circle cx="1570" cy="20" r="300" fill="#8D6BBA" opacity=".08"/>
+  </g>
+  <text x="64" y="63" class="eyebrow">LOGICLABELER / DATA LIFECYCLE</text>
+  <text x="64" y="120" class="title">Build a dataset. Train a model.</text>
+  <text x="64" y="160" class="subtitle">Each step produces an inspectable artifact; training starts when you choose.</text>
+  <g transform="translate(64 225)">
+    <rect width="322" height="255" rx="24" fill="#30263F" stroke="#73598D"/>
+    <text x="26" y="40" class="eyebrow">01 / INPUT</text>
+    <text x="26" y="85" class="name">Import images</text>
+    <text x="26" y="135" class="body">Upload image files</text>
+    <text x="26" y="172" class="body">YOLO · COCO · VOC ZIP</text>
+    <text x="26" y="218" class="small">Imported labels: boxes only</text>
+  </g>
+  <path d="M398 350H432" class="line"/>
+  <g transform="translate(448 225)">
+    <rect width="322" height="255" rx="24" fill="#30263F" stroke="#73598D"/>
+    <text x="26" y="40" class="eyebrow">02 / CURATE</text>
+    <text x="26" y="85" class="name">Annotate + edit</text>
+    <text x="26" y="135" class="body">AI boxes / canvas tools</text>
+    <text x="26" y="172" class="body">Optional separate review</text>
+    <text x="26" y="218" class="small">Save image-space geometry</text>
+  </g>
+  <path d="M782 350H816" class="line"/>
+  <g transform="translate(832 225)">
+    <rect width="322" height="255" rx="24" fill="#30263F" stroke="#73598D"/>
+    <text x="26" y="40" class="eyebrow">03 / PACKAGE</text>
+    <text x="26" y="85" class="name">Split + export</text>
+    <text x="26" y="135" class="body">Train / validation / test</text>
+    <text x="26" y="172" class="body">YOLO labels + data.yaml</text>
+    <text x="26" y="218" class="small">Detect · Segment · Pose · OBB</text>
+  </g>
+  <path d="M1166 350H1200" class="line"/>
+  <g transform="translate(1216 225)">
+    <rect width="320" height="255" rx="24" fill="#20372F" stroke="#65A68C"/>
+    <text x="26" y="40" class="eyebrow" style="fill:#85D6B4">04 / TRAIN</text>
+    <text x="26" y="85" class="name">Start YOLO job</text>
+    <text x="26" y="135" class="body">User-selected settings</text>
+    <text x="26" y="172" class="body">Separate Python process</text>
+    <text x="26" y="218" class="small">UI presets: detection models</text>
+  </g>
+  <path d="M609 596V492" class="line" stroke-dasharray="6 5"/>
+  <rect x="337" y="516" width="413" height="43" rx="13" fill="#201B2A"/>
+  <text x="543" y="545" text-anchor="middle" class="small">Optional re-labeling of new images</text>
+  <path d="M1376 482V584" fill="none" stroke="#78CBA8" stroke-width="3" marker-end="url(#green)"/>
+  <g transform="translate(64 600)">
+    <rect width="706" height="170" rx="24" fill="#221D2C" stroke="#66527F" stroke-dasharray="6 5"/>
+    <text x="28" y="42" class="eyebrow">SEPARATE AUGMENTATION WORKFLOW</text>
+    <text x="28" y="85" class="name">AI image augmentation</text>
+    <text x="28" y="126" class="body">DashScope image editing → new dataset images</text>
+  </g>
+  <g transform="translate(832 600)">
+    <rect width="704" height="170" rx="24" fill="#22362F" stroke="#65A68C"/>
+    <text x="28" y="42" class="eyebrow" style="fill:#85D6B4">TRAINING OUTPUTS</text>
+    <text x="28" y="85" class="name">Logs · metrics · plots · weights</text>
+    <text x="28" y="126" class="body">WebSocket logs · REST metrics · best.pt download</text>
+  </g>
+  <text x="64" y="824" class="small">Source: api/datasets.py · services/dataset_service.py · augmentation.py · training_service.py</text>
+</svg>

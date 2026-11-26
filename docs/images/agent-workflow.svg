@@ -1,137 +1,84 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-labelledby="title desc">
-  <title id="title">LogicLabeler multi-agent workflow</title>
-  <desc id="desc">A natural-language instruction moves through Commander, Soldier, Critic, and Reviewer, with human corrections stored in RAG memory.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="850" viewBox="0 0 1600 850" role="img" aria-labelledby="title desc">
+  <title id="title">LogicLabeler annotation pipeline</title>
+  <desc id="desc">The batch job optionally retrieves text context from ChromaDB, then runs Commander, Soldier and Critic before replacing and saving annotations. Reviewer is a separately triggered job on saved boxes. Human edits are not automatically written to RAG.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#FAF8FC"/>
-      <stop offset="1" stop-color="#F4EFF6"/>
-    </linearGradient>
-    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7B61B7"/>
-      <stop offset="1" stop-color="#4F378B"/>
-    </linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#381E72" flood-opacity=".10"/>
-    </filter>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
-      <path d="M0 0L10 5 0 10Z" fill="#6750A4"/>
-    </marker>
-    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
-      <path d="M0 0L10 5 0 10Z" fill="#1B8755"/>
-    </marker>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#15121E"/><stop offset="1" stop-color="#292038"/></linearGradient>
+    <linearGradient id="card" x2="1" y2="1"><stop stop-color="#32283F"/><stop offset="1" stop-color="#211C2B"/></linearGradient>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse"><path d="M64 0H0V64" fill="none" stroke="#A692C5" stroke-opacity=".06"/></pattern>
+    <clipPath id="clip"><rect width="1600" height="850" rx="32"/></clipPath>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8" fill="#BDA6E9"/></marker>
+    <marker id="green" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8" fill="#78CBA8"/></marker>
+    <style>
+      text{font-family:Inter,"Segoe UI",Arial,sans-serif}
+      .title{font-size:40px;font-weight:700;fill:#FAF7FF;letter-spacing:-1px}
+      .subtitle{font-size:23px;fill:#C3B9CF}
+      .eyebrow{font-size:17px;font-weight:700;fill:#BDA6E9;letter-spacing:2px}
+      .name{font-size:29px;font-weight:700;fill:#FAF7FF}
+      .body{font-size:22px;fill:#D4CCDF}
+      .small{font-size:20px;fill:#AEA2BF}
+      .pill{font-size:19px;font-weight:600;fill:#E6D9FF}
+      .line{fill:none;stroke:#BDA6E9;stroke-width:3;marker-end:url(#arrow)}
+    </style>
   </defs>
-
-  <rect width="1600" height="720" rx="36" fill="url(#bg)"/>
-  <text x="80" y="76" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="36" font-weight="750" letter-spacing="-1">From intent to trusted labels</text>
-  <text x="80" y="112" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">Every stage has one job—and every correction makes the next run better.</text>
-
-  <g transform="translate(78 176)">
-    <rect width="192" height="86" rx="22" fill="#fff" stroke="#D8CFE3"/>
-    <circle cx="42" cy="43" r="22" fill="#EADDFF"/>
-    <path d="M33 43h18M42 34v18" stroke="#6750A4" stroke-width="4" stroke-linecap="round"/>
-    <text x="76" y="36" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="700">Natural language</text>
-    <text x="76" y="59" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">instruction</text>
+  <g clip-path="url(#clip)">
+    <rect width="1600" height="850" fill="url(#bg)"/>
+    <rect width="1600" height="850" fill="url(#grid)"/>
+    <circle cx="1570" cy="20" r="300" fill="#8D6BBA" opacity=".08"/>
   </g>
-
-  <path d="M286 219H334" stroke="#6750A4" stroke-width="4" marker-end="url(#arrow)"/>
-
-  <g transform="translate(348 154)" filter="url(#shadow)">
-    <rect width="244" height="196" rx="28" fill="#fff" stroke="#D8CFE3"/>
-    <circle cx="42" cy="42" r="25" fill="#EADDFF"/>
-    <path d="M31 43h22M36 34l-5 9 5 9M48 34l5 9-5 9" fill="none" stroke="#6750A4" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="78" y="39" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="750">Commander</text>
-    <text x="78" y="62" fill="#6750A4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".7">PLAN</text>
-    <line x1="24" y1="84" x2="220" y2="84" stroke="#EEE8F1"/>
-    <text x="24" y="116" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Parse semantics</text>
-    <text x="24" y="142" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Resolve open vocabulary</text>
-    <rect x="24" y="160" width="133" height="24" rx="12" fill="#F3EDFA"/>
-    <text x="90" y="177" text-anchor="middle" fill="#6750A4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">Structured JSON</text>
+  <text x="64" y="63" class="eyebrow">LOGICLABELER / ANNOTATION ENGINE</text>
+  <text x="64" y="120" class="title">From a prompt to saved annotations</text>
+  <text x="64" y="160" class="subtitle">Batch labeling runs three agents. Dataset review is a separate action.</text>
+  <rect x="64" y="207" width="610" height="58" rx="18" fill="#30263F" stroke="#66527F" stroke-dasharray="6 5"/>
+  <text x="90" y="243" class="body">Optional: existing ChromaDB text context</text>
+  <path d="M220 266V300" class="line" stroke-dasharray="6 5"/>
+  <text x="1020" y="244" class="small">One background thread per batch job</text>
+  <g transform="translate(64 315)">
+    <rect width="322" height="235" rx="24" fill="url(#card)" stroke="#73598D"/>
+    <text x="26" y="38" class="eyebrow">01 / PLAN</text>
+    <text x="26" y="81" class="name">Commander</text>
+    <text x="26" y="126" class="body">Instruction → JSON plan</text>
+    <text x="26" y="158" class="body">Targets, prompts, rules</text>
+    <rect x="25" y="181" width="272" height="35" rx="10" fill="#4A365F"/>
+    <text x="161" y="205" text-anchor="middle" class="pill">Text model</text>
   </g>
-
-  <path d="M608 252H654" stroke="#6750A4" stroke-width="4" marker-end="url(#arrow)"/>
-
-  <g transform="translate(668 154)" filter="url(#shadow)">
-    <rect width="244" height="196" rx="28" fill="#fff" stroke="#C8DCEC"/>
-    <circle cx="42" cy="42" r="25" fill="#D1E4FF"/>
-    <path d="M29 31h26v22H29zM33 49l7-8 5 5 4-4 6 7" fill="none" stroke="#0061A4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="78" y="39" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="750">Soldier</text>
-    <text x="78" y="62" fill="#0061A4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".7">GROUND</text>
-    <line x1="24" y1="84" x2="220" y2="84" stroke="#E5EDF3"/>
-    <text x="24" y="116" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Detect and localize</text>
-    <text x="24" y="142" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">VLM or Grounded-SAM</text>
-    <rect x="24" y="160" width="116" height="24" rx="12" fill="#EAF4FF"/>
-    <text x="82" y="177" text-anchor="middle" fill="#0061A4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">SAHI ready</text>
+  <path d="M398 432H432" class="line"/>
+  <g transform="translate(448 315)">
+    <rect width="322" height="235" rx="24" fill="url(#card)" stroke="#73598D"/>
+    <text x="26" y="38" class="eyebrow">02 / DETECT</text>
+    <text x="26" y="81" class="name">Soldier</text>
+    <text x="26" y="126" class="body">VLM or Grounding DINO</text>
+    <text x="26" y="158" class="body">Pixel-coordinate boxes</text>
+    <rect x="25" y="181" width="272" height="35" rx="10" fill="#4A365F"/>
+    <text x="161" y="205" text-anchor="middle" class="pill">Optional SAHI tiling</text>
   </g>
-
-  <path d="M928 252H974" stroke="#6750A4" stroke-width="4" marker-end="url(#arrow)"/>
-
-  <g transform="translate(988 154)" filter="url(#shadow)">
-    <rect width="244" height="196" rx="28" fill="#fff" stroke="#E7D6B8"/>
-    <circle cx="42" cy="42" r="25" fill="#FFF1D6"/>
-    <path d="M31 43l7 7 15-17" fill="none" stroke="#B26B00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="78" y="39" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="750">Critic</text>
-    <text x="78" y="62" fill="#9A5D00" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".7">CHALLENGE</text>
-    <line x1="24" y1="84" x2="220" y2="84" stroke="#F1E9DC"/>
-    <text x="24" y="116" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Check spatial logic</text>
-    <text x="24" y="142" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Debate low confidence</text>
-    <rect x="24" y="160" width="104" height="24" rx="12" fill="#FFF5E3"/>
-    <text x="76" y="177" text-anchor="middle" fill="#9A5D00" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">IoU + VLM</text>
+  <path d="M782 432H816" class="line"/>
+  <g transform="translate(832 315)">
+    <rect width="322" height="235" rx="24" fill="url(#card)" stroke="#73598D"/>
+    <text x="26" y="38" class="eyebrow">03 / VALIDATE</text>
+    <text x="26" y="81" class="name">Critic</text>
+    <text x="26" y="126" class="body">Geometric rules</text>
+    <text x="26" y="158" class="body">Low-confidence crops</text>
+    <rect x="25" y="181" width="272" height="35" rx="10" fill="#4A365F"/>
+    <text x="161" y="205" text-anchor="middle" class="pill">VLM check if score &lt; 0.5</text>
   </g>
-
-  <path d="M1248 252H1294" stroke="#6750A4" stroke-width="4" marker-end="url(#arrow)"/>
-
-  <g transform="translate(1308 154)" filter="url(#shadow)">
-    <rect width="214" height="196" rx="28" fill="#fff" stroke="#CBE5D5"/>
-    <circle cx="42" cy="42" r="25" fill="#D8F0E1"/>
-    <path d="M30 42l8 8 17-18M31 58h24" fill="none" stroke="#1B8755" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="78" y="39" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="750">Reviewer</text>
-    <text x="78" y="62" fill="#1B8755" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".7">VERIFY</text>
-    <line x1="24" y1="84" x2="190" y2="84" stroke="#E4F0E8"/>
-    <text x="24" y="116" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Inspect crops</text>
-    <text x="24" y="142" fill="#49454F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15">Approve or adjust</text>
-    <rect x="24" y="160" width="130" height="24" rx="12" fill="#EAF7EF"/>
-    <text x="89" y="177" text-anchor="middle" fill="#1B8755" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">Trusted labels</text>
+  <path d="M1166 432H1200" class="line"/>
+  <g transform="translate(1216 315)">
+    <rect width="320" height="235" rx="24" fill="#20372F" stroke="#65A68C"/>
+    <text x="26" y="38" class="eyebrow" style="fill:#85D6B4">04 / PERSIST</text>
+    <text x="26" y="81" class="name">Save annotations</text>
+    <text x="26" y="126" class="body">Replace image labels</text>
+    <text x="26" y="158" class="body">Save classes + progress</text>
+    <rect x="25" y="181" width="270" height="35" rx="10" fill="#2E5143"/>
+    <text x="160" y="205" text-anchor="middle" class="pill" style="fill:#B2E9D1">SQLite</text>
   </g>
-
-  <g transform="translate(78 452)">
-    <rect width="1444" height="184" rx="30" fill="#fff" stroke="#D8CFE3"/>
-    <text x="34" y="42" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="1">CONTINUOUS LEARNING LOOP</text>
-
-    <g transform="translate(42 72)">
-      <rect width="238" height="76" rx="20" fill="#F8F4FA" stroke="#DED5E4"/>
-      <circle cx="38" cy="38" r="20" fill="#E8DEF8"/>
-      <path d="M30 39l6 6 11-14" fill="none" stroke="#6750A4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-      <text x="70" y="32" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">Human correction</text>
-      <text x="70" y="54" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Fix once</text>
-    </g>
-
-    <path d="M302 110H420" stroke="#1B8755" stroke-width="4" marker-end="url(#arrowGreen)"/>
-
-    <g transform="translate(438 72)">
-      <rect width="260" height="76" rx="20" fill="#EAF7EF" stroke="#BFDCCB"/>
-      <g transform="translate(20 18)" fill="none" stroke="#1B8755" stroke-width="3">
-        <ellipse cx="20" cy="8" rx="18" ry="7"/><path d="M2 8v12c0 4 8 7 18 7s18-3 18-7V8M2 20v12c0 4 8 7 18 7s18-3 18-7V20"/>
-      </g>
-      <text x="76" y="32" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">RAG memory</text>
-      <text x="76" y="54" fill="#496154" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Embed the lesson</text>
-    </g>
-
-    <path d="M720 110H838" stroke="#1B8755" stroke-width="4" marker-end="url(#arrowGreen)"/>
-
-    <g transform="translate(856 72)">
-      <rect width="280" height="76" rx="20" fill="#F3EDFA" stroke="#D8CFE3"/>
-      <circle cx="38" cy="38" r="20" fill="#EADDFF"/>
-      <path d="M28 42c6-12 13-12 20 0M29 33h18" fill="none" stroke="#6750A4" stroke-width="3" stroke-linecap="round"/>
-      <text x="72" y="32" fill="#1D1B20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">Similar future task</text>
-      <text x="72" y="54" fill="#625B71" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Retrieve negative examples</text>
-    </g>
-
-    <path d="M1158 110H1276" stroke="#1B8755" stroke-width="4" marker-end="url(#arrowGreen)"/>
-
-    <g transform="translate(1294 72)">
-      <rect width="114" height="76" rx="20" fill="#1B8755"/>
-      <text x="57" y="33" text-anchor="middle" fill="#fff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="750">Better</text>
-      <text x="57" y="54" text-anchor="middle" fill="#D8F0E1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">next run</text>
-    </g>
+  <path d="M1376 552V603" fill="none" stroke="#78CBA8" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#green)"/>
+  <g transform="translate(64 620)">
+    <rect width="1472" height="145" rx="24" fill="#221D2C" stroke="#63516F"/>
+    <rect x="22" y="24" width="304" height="97" rx="18" fill="#3B2F4B"/>
+    <text x="45" y="58" class="eyebrow">SEPARATE REVIEW JOB</text>
+    <text x="45" y="96" class="name">Reviewer</text>
+    <text x="365" y="57" class="body">Inspect saved crops → status + suggestions → user applies review results</text>
+    <text x="365" y="98" class="small">Human edits are not connected to RAG write-back. Review does not adjust box geometry.</text>
   </g>
+  <text x="64" y="810" class="small">Source: backend/app/api/labeling.py · services/commander.py · soldier.py · critic.py · reviewer.py</text>
 </svg>
